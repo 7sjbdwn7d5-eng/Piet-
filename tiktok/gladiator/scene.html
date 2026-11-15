@@ -17,17 +17,17 @@ const ctx = document.getElementById('c').getContext('2d');
 const FONT = '"Inter", "Inter Display", sans-serif';
 
 // Szenen-Schnitte (Video-Zeit), getimt auf den Sprechertext (lines.json)
-const B = [0, 4.05, 9.0, 16.5, 23.4, 34.45, 39.8];
+const B = [0, 3.94, 8.84, 16.45, 23.16, 33.87, 38.56];   // getimt auf Brian (sprecher_brian.mp3, Pausen gekürzt)
 const S = { hook: [B[0], B[1]], s6: [B[1], B[2]], s12: [B[2], B[3]], s15: [B[3], B[4]], judge: [B[4], B[5]], outro: [B[5], B[6]] };
 // Einstellungen innerhalb der Szenen
-const GATE = 2.3;                 // Hook: Kamera fährt aufs Tor
-const TRAIN = 6.4;                // "Training mit dem Holzschwert"
-const GERSTEN = 12.85;            // "Gerstenfresser"
-const ASH = 13.7;                 // "Dazu ein Trank aus Asche"
-const GATEOPEN = 17.6;            // "Das Tor öffnet sich"
-const ARENA = 19.0, FOE = 21.1;   // "Fünfzigtausend Menschen schreien" / "Dein Gegner"
-const FALL = 24.9;                // "... und du liegst im Sand" (Zeitlupe)
-const THUMB = 25.5, ALIVE = 27.3, COINS = 29.8, STAR = 31.25;
+const GATE = 2.58;                 // Hook: Kamera fährt aufs Tor
+const TRAIN = 6.21;                // "Training mit dem Holzschwert"
+const GERSTEN = 12.53;            // "Gerstenfresser"
+const ASH = 13.56;                 // "Dazu ein Trank aus Asche"
+const GATEOPEN = 17.54;            // "Das Tor öffnet sich"
+const ARENA = 18.97, FOE = 20.8;   // "Fünfzigtausend Menschen schreien" / "Dein Gegner"
+const FALL = 24.36;                // "... und du liegst im Sand" (Zeitlupe)
+const THUMB = 25.31, ALIVE = 27.11, COINS = 29.32, STAR = 30.84;
 const WIPES = [TRAIN, ASH, ARENA, THUMB, COINS, STAR];
 window.DURATION = B[6];
 

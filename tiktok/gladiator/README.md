@@ -1,6 +1,6 @@
 # „Ein Tag als Gladiator im alten Rom"
 
-**Video:** `gladiator_final.mp4` – 39,4 s, 1080×1920, 30 fps. Erzähler vorerst Ersatzstimme; Brian-Fassung nach Upload.
+**Video:** `gladiator_final.mp4` – 38,6 s, 1080×1920, 30 fps. Erzähler: ElevenLabs Brian (`sprecher_brian.mp3`); Pausen gekürzt + 3 % schneller, alle Bildwechsel auf seine Sätze gelegt.
 
 | Zeit | Szene | Einstellungen |
 |---|---|---|
@@ -19,8 +19,8 @@ Gerstenfresser/hordearii (Plinius), Asche-Trank & vegetarische Kost (Knochenanal
 Ein Tag als Gladiator im alten Rom. Würdest du ihn überleben?
 Sechs Uhr. Gladiatorenschule. Training mit dem Holzschwert, stundenlang.
 Zwölf Uhr. Gerstenbrei und Bohnen. Man nannte sie: Gerstenfresser. Dazu ein Trank aus Asche, für starke Knochen.
-Fünfzehn Uhr. Das Tor öffnet sich. Fünfzigtausend Menschen schreien. Dein Gegner: Netz und Dreizack.
-Ein Fehler, und du liegst im Sand. Jetzt entscheidet das Publikum. Doch die meisten Kämpfe endeten nicht tödlich, Gladiatoren waren teuer. Wer mutig kämpfte, wurde gefeiert wie ein Star.
+Fünfzehn Uhr. Das Tor öffnet sich. Fünfzigtausend Menschen. Dein Gegner: Netz und Dreizack.
+Ein Fehler, und du liegst im Sand. Jetzt entscheidet das Publikum. Doch meistens endete es nicht tödlich. Gladiatoren waren teuer. Wer mutig kämpfte, wurde gefeiert wie ein Star.
 Und ihr? Würdet ihr einen Tag überleben? Schreibt es in die Kommentare!
 ```
 

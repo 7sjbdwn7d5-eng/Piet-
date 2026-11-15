@@ -2,9 +2,9 @@
 import sys, os, numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 from sfxlib import *
-B = [0, 4.05, 9.0, 16.5, 23.4, 34.45, 39.8]
-GATE, TRAIN, GERSTEN, ASH, GATEOPEN, ARENA, FOE = 2.3, 6.4, 12.85, 13.7, 17.6, 19.0, 21.1
-FALL, THUMB, ALIVE, COINS, STAR = 24.9, 25.5, 27.3, 29.8, 31.25
+B = [0, 3.94, 8.84, 16.45, 23.16, 33.87, 38.56]
+GATE, TRAIN, GERSTEN, ASH, GATEOPEN, ARENA, FOE = 2.58, 6.21, 12.53, 13.56, 17.54, 18.97, 20.8
+FALL, THUMB, ALIVE, COINS, STAR = 24.36, 25.31, 27.11, 29.32, 30.84
 WIPES = [TRAIN, ASH, ARENA, THUMB, COINS, STAR]
 tr = Track(B[-1])
 
