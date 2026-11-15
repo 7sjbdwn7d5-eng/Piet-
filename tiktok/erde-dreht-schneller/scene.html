@@ -16,19 +16,19 @@ const W = 1080, H = 1920;
 const ctx = document.getElementById('c').getContext('2d');
 const FONT = '"Inter", "Inter Display", sans-serif';
 
-const B = [0, 3.4, 9.2, 15.4, 22.7, 29.8, 36.5];          // Schnitte (Video-Zeit)
+const B = [0, 3.65, 10.2, 17.4, 25.7, 33.8, 38.8];   // getimt auf Brian (sprecher_brian.mp3)          // Schnitte (Video-Zeit)
 const S = { hook: [B[0], B[1]], now: [B[1], B[2]], week: [B[2], B[3]], year: [B[3], B[4]], tenk: [B[4], B[5]], outro: [B[5], B[6]] };
-const SPEEDUP = 1.65;     // Hook: "... doppelt so schnell ..."
-const STORM = 12.5;       // "Und Stürme drehen sich schneller ..."
-const MIGRATE = [16.3, 21.6];   // Meere wandern zum Äquator
-const RING = 26.85;        // "Ein einziger Ozean umspannt den Äquator"
+const SPEEDUP = 1.7;     // Hook: "... doppelt so schnell ..."
+const STORM = 14.2;       // "Und Stürme drehen sich schneller ..."
+const MIGRATE = [18.8, 21.3];   // Meere wandern zum Äquator
+const RING = 30.65;        // "Ein einziger Ozean umspannt den Äquator"
 const DAY_P = 2.6;        // ein 12-Stunden-Tag dauert im Zeitraffer 2,6 s
 // Einstellungen (Shots) innerhalb der Szenen – Wechsel mit Wisch-Übergang
-const CAL = 6.3;          // "Und ein Jahr: 730 Tage" -> Kalender
-const HURR = 14.0;        // Hurrikan aus dem All
-const SPLIT = 19.1;       // "Ganze Länder versinken" -> Stadt versinkt
-const POLE = 20.55;       // "an den Polen taucht neues Land auf" -> Split-Screen
-const VOLC0 = 25.45, VOLC1 = 26.8;   // Vulkan-Nahaufnahme
+const CAL = 7.25;          // "Und ein Jahr: 730 Tage" -> Kalender
+const HURR = 15.6;        // Hurrikan aus dem All
+const SPLIT = 21.45;       // "Ganze Länder versinken" -> Stadt versinkt
+const POLE = 23.3;       // "an den Polen taucht neues Land auf" -> Split-Screen
+const VOLC0 = 29.0, VOLC1 = 30.5;   // Vulkan-Nahaufnahme
 const WIPES = [CAL, STORM, HURR, SPLIT, VOLC0, VOLC1];
 window.DURATION = B[6];
 
@@ -37,18 +37,18 @@ const SCENES = [
   { key: 'now', pre: '', big: 'SOFORT', node: 'Sofort',
     counter: lt => 'TAG ' + (1 + Math.floor(lt / DAY_P)) + ' VON 730',
     facts: [{ at: 1.2, text: 'Ein Tag dauert nur noch *12 Stunden*.' },
-            { at: 3.0, text: 'Und ein Jahr hat *730 Tage*.' }] },
+            { at: CAL - B[1], text: 'Und ein Jahr hat *730 Tage*.' }] },
   { key: 'week', pre: 'NACH', big: '1 WOCHE', node: '1 Woche',
-    counter: lt => 'TAG ' + Math.min(14, 1 + Math.floor(14 * lt / 5.8)) + ' VON 14',
+    counter: lt => 'TAG ' + Math.min(14, 1 + Math.floor(14 * lt / (B[3] - B[2] - 0.3))) + ' VON 14',
     facts: [{ at: 1.0, text: 'Unsere *innere Uhr* kommt nicht mehr mit.' },
             { at: STORM - B[2] + 0.1, text: 'Stürme drehen sich schneller und werden *heftiger*.' }] },
   { key: 'year', pre: 'NACH', big: '1 JAHR', node: '1 Jahr',
-    counter: lt => 'TAG ' + fmt(Math.min(730, 1 + Math.floor(730 * lt / 7))),
-    facts: [{ at: 1.0, text: 'Die Fliehkraft schiebt die *Meere* zum Äquator.' },
-            { at: 3.8, text: 'Länder am Äquator *versinken*. An den Polen taucht Land auf.' }] },
+    counter: lt => 'TAG ' + fmt(Math.min(730, 1 + Math.floor(730 * lt / (B[4] - B[3] - 0.3)))),
+    facts: [{ at: 1.35, text: 'Die Fliehkraft schiebt die *Meere* zum Äquator.' },
+            { at: SPLIT - B[3] + 0.1, text: 'Länder am Äquator *versinken*. An den Polen taucht Land auf.' }] },
   { key: 'tenk', pre: 'NACH', big: '10.000 JAHREN', node: '10.000 J.',
-    counter: lt => 'JAHR ' + fmt(Math.max(1, Math.round(Math.pow(clamp(lt / 6.5), 2.5) * 10000 / 10) * 10)),
-    facts: [{ at: 1.0, text: 'Die Erde wird *platter*. Vulkane brechen aus.' },
+    counter: lt => 'JAHR ' + fmt(Math.max(1, Math.round(Math.pow(clamp(lt / (B[5] - B[4] - 0.4)), 2.5) * 10000 / 10) * 10)),
+    facts: [{ at: 2.0, text: 'Die Erde wird *platter*. Vulkane brechen aus.' },
             { at: RING - B[4] + 0.2, text: 'Ein einziger *Ozean* umspannt den Äquator.' }] },
 ];
 
@@ -195,7 +195,7 @@ const trees = [{ x: 60, y: 1700, s: 1.2 }, { x: 330, y: 1650, s: 0.9 }, { x: 480
 const flowers = Array.from({ length: 34 }, () => ({ x: rr(0, W), y: rr(1740, 1900), c: ['#ff5d7a', '#ffd23f', '#ffffff', '#b07cff'][Math.floor(R() * 4)], h: rr(30, 55) }));
 const rain = Array.from({ length: 260 }, () => ({ x: rr(-200, W + 200), y: rr(0, H), sp: rr(1400, 2200), l: rr(30, 60) }));
 const stormClouds = Array.from({ length: 16 }, () => ({ x: rr(-200, W + 200), y: rr(120, 900), s: rr(1, 2.2), sp: rr(220, 420) }));
-const lightning = [12.75, 13.45];
+const lightning = [14.45, 15.15];
 
 function sunPhase(t) {           // 0..1 innerhalb eines (Zeitraffer-)Tages
   return (((t - B[1]) / DAY_P) + 0.18) % 1;
@@ -412,8 +412,8 @@ function drawOutro(t) {
   const lt = t - B[5]; if (lt < 0) return;
   const a = clamp(lt / 0.4);
   ctx.save(); ctx.fillStyle = `rgba(1,2,8,${0.55 * a})`; ctx.fillRect(0, 0, W, H);
-  const items = [['UND JETZT DU:', 470, 74, '#3fd0ff'], ['Wo würdest DU leben?', 610, 88, '#fff'], ['ÄQUATOR', 775, 150, '#ff9d2e'], ['oder', 900, 70, '#fff'], ['POL?', 1030, 170, '#3fd0ff']];
-  items.forEach(([txt, y, sz, col], i) => { const k = backOut(clamp((lt - 0.1 - i * 0.18) / 0.4)); if (k <= 0) return; ctx.save(); ctx.translate(W / 2 + (i === 2 ? Math.sin(lt * 3) * 8 : i === 4 ? -Math.sin(lt * 3) * 8 : 0), y); ctx.scale(k, k); strokeText(txt, 0, 0, sz, col, 900, 20); ctx.restore(); });
+  const items = [['UND JETZT DU:', 470, 74, '#3fd0ff'], ['Was interessiert', 625, 96, '#fff'], ['EUCH', 790, 190, '#3fd0ff'], ['noch?', 950, 130, '#ff9d2e']];
+  items.forEach(([txt, y, sz, col], i) => { const k = backOut(clamp((lt - 0.1 - i * 0.2) / 0.4)); if (k <= 0) return; ctx.save(); ctx.translate(W / 2 + (i === 2 ? Math.sin(lt * 3) * 8 : 0), y); ctx.scale(k, k); strokeText(txt, 0, 0, sz, col, 900, 20); ctx.restore(); });
   const k3 = clamp((lt - 1.3) / 0.4);
   if (k3 > 0) {
     ctx.globalAlpha = k3; const bob = Math.sin(lt * 6) * 10;
@@ -436,13 +436,13 @@ function zoomAt(t) { let base = 1; for (const k in S) { const [a, b] = S[k]; if 
 //  SHOTS
 // ============================================================
 function globeShot(t) {
-  const m = ease(inv(MIGRATE[0], MIGRATE[1], t)), ring = ease(inv(B[4] + 0.6, RING + 0.8, t)), flat = ease(inv(B[4] + 0.8, B[4] + 3.5, t));
+  const m = ease(inv(MIGRATE[0], MIGRATE[1], t)), ring = ease(inv(RING - 0.2, RING + 1.8, t)), flat = ease(inv(27.6, 29.0, t));
   let R = 360, cy = 1240;
   if (t < SPLIT) R = lerp(320, 420, ease(inv(B[3], SPLIT, t)));                 // Kamera fährt heran
   else if (t < VOLC0) R = lerp(430, 360, ease(inv(B[4], VOLC0, t)));            // leicht zurück
   else R = lerp(470, 330, ease(inv(VOLC1, B[5] + 1.5, t)));                      // großer Rückflug
   drawSpace(t, 1, 0);
-  const g = { cx: W / 2, cy, R, fx: 1 + 0.05 * flat, fy: 1 - 0.12 * flat, rot: spin(t), dry: lerp(lerp(90, 42, m), 32, ring), flood: lerp(lerp(0, 22, m), 30, ring), volc: inv(B[4] + 1.6, B[4] + 2.6, t), eq: 1 };
+  const g = { cx: W / 2, cy, R, fx: 1 + 0.05 * flat, fy: 1 - 0.12 * flat, rot: spin(t), dry: lerp(lerp(90, 42, m), 32, ring), flood: lerp(lerp(0, 22, m), 30, ring), volc: inv(28.6, 29.2, t), eq: 1 };
   drawGlobe(t, g); drawSpeedStreaks(t, g, 0.6);
   // Pfeile: Wasser strömt zum Äquator
   const ar = inv(MIGRATE[0], MIGRATE[0] + 0.5, t) * (1 - inv(SPLIT - 0.4, SPLIT, t));

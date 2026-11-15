@@ -2,11 +2,11 @@
 import sys, os, numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 from sfxlib import *
-B = [0, 3.4, 9.2, 15.4, 22.7, 29.8, 36.5]
-SPEEDUP, STORM, RING, DAY_P = 1.65, 12.5, 26.85, 2.6
-CAL, HURR, SPLIT, POLE, VOLC0, VOLC1 = 6.3, 14.0, 19.1, 20.55, 25.45, 26.8
-MIGRATE = (16.3, 21.6)
-LIGHTNING = [12.75, 13.45]
+B = [0, 3.65, 10.2, 17.4, 25.7, 33.8, 38.8]
+SPEEDUP, STORM, RING, DAY_P = 1.7, 14.2, 30.65, 2.6
+CAL, HURR, SPLIT, POLE, VOLC0, VOLC1 = 7.25, 15.6, 21.45, 23.3, 29.0, 30.5
+MIGRATE = (18.8, 21.3)
+LIGHTNING = [14.45, 15.15]
 VOLC = VOLC0 + 0.05
 tr = Track(B[-1])
 
@@ -67,8 +67,8 @@ for i, t0 in enumerate([VOLC, VOLC + 0.9, VOLC + 2.1, VOLC + 3.3]):
 # Ozean-Gürtel schließt sich: Whoosh + Glocke
 whoosh_in(tr, RING + 0.6, 1.2, 0.35); ding(tr, RING + 0.6, 0.2)
 # UI-Pops
-facts = [(B[1], 1.2), (B[1], 3.0), (B[2], 1.0), (B[2], STORM - B[2] + 0.1), (B[3], 1.0), (B[3], 3.8), (B[4], 1.0), (B[4], RING - B[4] + 0.2)]
+facts = [(B[1], 1.2), (B[1], CAL - B[1]), (B[2], 1.0), (B[2], STORM - B[2] + 0.1), (B[3], 1.35), (B[3], SPLIT - B[3] + 0.1), (B[4], 2.0), (B[4], RING - B[4] + 0.2)]
 for a, f in facts: pop(tr, a + f)
-for x in (0.1, 0.28, 0.46, 0.64, 0.82): pop(tr, B[5] + x, 0.2)
+for x in (0.1, 0.3, 0.5, 0.7): pop(tr, B[5] + x, 0.2)
 ding(tr, B[5] + 1.3)
 tr.save(sys.argv[1] if len(sys.argv) > 1 else 'sfx.wav')

@@ -13,6 +13,7 @@ Format: TikTok 1080×1920, 30 fps, **30–40 s**, Deutsch. Ordner pro Folge: `ti
 
 ## Ton
 - **Erzähler (bevorzugt): ElevenLabs „Brian – Deep, Resonant and Comforting", Modell eleven v4, Deutsch.** Der Nutzer erzeugt die MP3 selbst in der ElevenLabs-App aus dem Sprechertext und lädt sie hoch. Dann: Pausen mit `ffmpeg -af silencedetect=n=-40dB:d=0.25` messen, Sätze zuordnen, Schnitte (`B`) auf den Beginn von „Nach …" legen (≈0,1 s davor), Story-Momente auf die passenden Wörter, und `tools/extvoice.sh <mp3> voice.wav` statt `voice.py` verwenden. Beispiel: `menschen-verschwinden/` (VIDEO_BOUNDS mit Extra-Stützpunkt für den Verschwinde-Moment).
+- Hochgeladene Aufnahme transkribieren (der Nutzer ändert Sätze manchmal selbst!): `ffmpeg -i in.mp3 -ac 1 -ar 16000 in.wav` und `python3 tools/stt.py ~/voices/sherpa-onnx-whisper-small in.wav "0-10,10-20,…"`. Geänderte Sätze im Bild (Fakt-Karten/Outro) übernehmen.
 - Solange keine Brian-Aufnahme da ist: Ersatz-Erzähler Piper (siehe unten), und dem Nutzer den Sprechertext zum Einfügen in ElevenLabs schicken.
 - **Erzähler:** Piper „Thorsten high" (`tools/voice.py`), Text + Einsatzzeiten in `<slug>/lines.json`. Erst Zeilen einsprechen, Längen messen, DANN Szenen-Schnitte (`B` in scene.html) danach legen. Jede Zeile muss vor dem nächsten Schnitt enden.
 - **Hintergrund-Stimme** (Nachrichten/Durchsage/Funk, Piper „Kerstin"): `tools/news.py` mit `<slug>/news.json`; darf mitten im Satz abbrechen, wenn die Story es verlangt.
@@ -26,6 +27,8 @@ pip install piper-tts scipy
 mkdir -p ~/voices && cd ~/voices
 curl -L -o th.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-de_DE-thorsten-high.tar.bz2 && tar xjf th.tar.bz2
 curl -L -o k.tar.gz https://github.com/rhasspy/piper/releases/download/v0.0.2/voice-de-kerstin-low.tar.gz && tar xzf k.tar.gz
+pip install sherpa-onnx   # Spracherkennung
+curl -L -o ws.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-small.tar.bz2 && tar xjf ws.tar.bz2
 ```
 Thorsten: `~/voices/vits-piper-de_DE-thorsten-high/de_DE-thorsten-high.onnx`, Kerstin: `~/voices/de-kerstin-low.onnx`.
 
