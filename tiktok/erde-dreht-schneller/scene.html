@@ -16,13 +16,20 @@ const W = 1080, H = 1920;
 const ctx = document.getElementById('c').getContext('2d');
 const FONT = '"Inter", "Inter Display", sans-serif';
 
-const B = [0, 3.4, 9.2, 15.4, 22.7, 29.8, 35.0];          // Schnitte (Video-Zeit)
+const B = [0, 3.4, 9.2, 15.4, 22.7, 29.8, 36.5];          // Schnitte (Video-Zeit)
 const S = { hook: [B[0], B[1]], now: [B[1], B[2]], week: [B[2], B[3]], year: [B[3], B[4]], tenk: [B[4], B[5]], outro: [B[5], B[6]] };
 const SPEEDUP = 1.65;     // Hook: "... doppelt so schnell ..."
 const STORM = 12.5;       // "Und Stürme drehen sich schneller ..."
 const MIGRATE = [16.3, 21.6];   // Meere wandern zum Äquator
-const RING = 26.6;        // "Ein einziger Ozean umspannt den Äquator"
+const RING = 26.85;        // "Ein einziger Ozean umspannt den Äquator"
 const DAY_P = 2.6;        // ein 12-Stunden-Tag dauert im Zeitraffer 2,6 s
+// Einstellungen (Shots) innerhalb der Szenen – Wechsel mit Wisch-Übergang
+const CAL = 6.3;          // "Und ein Jahr: 730 Tage" -> Kalender
+const HURR = 14.0;        // Hurrikan aus dem All
+const SPLIT = 19.1;       // "Ganze Länder versinken" -> Stadt versinkt
+const POLE = 20.55;       // "an den Polen taucht neues Land auf" -> Split-Screen
+const VOLC0 = 25.45, VOLC1 = 26.8;   // Vulkan-Nahaufnahme
+const WIPES = [CAL, STORM, HURR, SPLIT, VOLC0, VOLC1];
 window.DURATION = B[6];
 
 const fmt = n => n.toLocaleString('de-DE');
@@ -166,9 +173,13 @@ function drawSpeedStreaks(t, g, amt) {
   }
   ctx.restore();
 }
-function drawSpace(t, alpha = 1) {
+function drawSpace(t, alpha = 1, warp = 0, cx = W / 2, cy = 1300) {
   ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#02030b'; ctx.fillRect(0, 0, W, H);
-  for (const s of spaceStars) { ctx.fillStyle = `rgba(255,255,255,${s.b * (0.7 + 0.3 * Math.sin(t * 2 + s.x))})`; ctx.fillRect(s.x, s.y, s.r, s.r); }
+  for (const s of spaceStars) {
+    const a = s.b * (0.7 + 0.3 * Math.sin(t * 2 + s.x));
+    if (warp > 0.02) { const dx = s.x - cx, dy = s.y - cy, L = warp * 0.12; ctx.strokeStyle = `rgba(200,225,255,${a})`; ctx.lineWidth = s.r; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + dx * L, s.y + dy * L); ctx.stroke(); }
+    else { ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fillRect(s.x, s.y, s.r, s.r); }
+  }
   ctx.restore();
 }
 
@@ -184,7 +195,7 @@ const trees = [{ x: 60, y: 1700, s: 1.2 }, { x: 330, y: 1650, s: 0.9 }, { x: 480
 const flowers = Array.from({ length: 34 }, () => ({ x: rr(0, W), y: rr(1740, 1900), c: ['#ff5d7a', '#ffd23f', '#ffffff', '#b07cff'][Math.floor(R() * 4)], h: rr(30, 55) }));
 const rain = Array.from({ length: 260 }, () => ({ x: rr(-200, W + 200), y: rr(0, H), sp: rr(1400, 2200), l: rr(30, 60) }));
 const stormClouds = Array.from({ length: 16 }, () => ({ x: rr(-200, W + 200), y: rr(120, 900), s: rr(1, 2.2), sp: rr(220, 420) }));
-const lightning = [11.2, 13.3, 14.5];
+const lightning = [12.75, 13.45];
 
 function sunPhase(t) {           // 0..1 innerhalb eines (Zeitraffer-)Tages
   return (((t - B[1]) / DAY_P) + 0.18) % 1;
@@ -281,7 +292,7 @@ function rgbHex(c) { return '#' + c.map(v => (v | 0).toString(16).padStart(2, '0
 
 // Uhr-Widget links: zeigt, wie schnell ein 12-Stunden-Tag vergeht
 function drawClock(t) {
-  const a = inv(B[1] + 0.2, B[1] + 0.6, t) * (1 - inv(B[3] - 0.3, B[3], t)); if (a <= 0) return;
+  const inLand = (t > B[1] && t < CAL) || (t > STORM && t < HURR); const a = inLand ? inv(B[1] + 0.2, B[1] + 0.6, t) : 0; if (a <= 0) return;
   const x = 95, y = 1120, r = 62;
   ctx.save(); ctx.globalAlpha = a;
   ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.roundRect(x - 85, y - 85, 170, 250, 30); ctx.fill();
@@ -401,8 +412,8 @@ function drawOutro(t) {
   const lt = t - B[5]; if (lt < 0) return;
   const a = clamp(lt / 0.4);
   ctx.save(); ctx.fillStyle = `rgba(1,2,8,${0.55 * a})`; ctx.fillRect(0, 0, W, H);
-  const items = [['UND JETZT DU:', 470, 74, '#3fd0ff'], ['12-Stunden-Tage:', 620, 96, '#fff'], ['GUT', 790, 170, '#3ddc84'], ['oder', 915, 70, '#fff'], ['SCHLECHT?', 1040, 150, '#ff4d5e']];
-  items.forEach(([txt, y, sz, col], i) => { const k = backOut(clamp((lt - 0.1 - i * 0.18) / 0.4)); if (k <= 0) return; ctx.save(); ctx.translate(W / 2, y); ctx.scale(k, k); strokeText(txt, 0, 0, sz, col, 900, 20); ctx.restore(); });
+  const items = [['UND JETZT DU:', 470, 74, '#3fd0ff'], ['Wo würdest DU leben?', 610, 88, '#fff'], ['ÄQUATOR', 775, 150, '#ff9d2e'], ['oder', 900, 70, '#fff'], ['POL?', 1030, 170, '#3fd0ff']];
+  items.forEach(([txt, y, sz, col], i) => { const k = backOut(clamp((lt - 0.1 - i * 0.18) / 0.4)); if (k <= 0) return; ctx.save(); ctx.translate(W / 2 + (i === 2 ? Math.sin(lt * 3) * 8 : i === 4 ? -Math.sin(lt * 3) * 8 : 0), y); ctx.scale(k, k); strokeText(txt, 0, 0, sz, col, 900, 20); ctx.restore(); });
   const k3 = clamp((lt - 1.3) / 0.4);
   if (k3 > 0) {
     ctx.globalAlpha = k3; const bob = Math.sin(lt * 6) * 10;
@@ -417,8 +428,221 @@ function drawOutro(t) {
 // ---------- fx ----------
 const CUTS = [B[1], B[2], B[3], B[4], B[5]];
 function flash(t) { let m = 0; for (const c of CUTS) { const d = t - c; if (d >= -0.06 && d < 0.4) m = Math.max(m, d < 0 ? 1 + d / 0.06 : 1 - d / 0.4); } return clamp(m); }
-function shake(t) { let m = 0; for (const c of [...CUTS, SPEEDUP]) { const d = t - c; if (d >= 0 && d < 0.5) m = Math.max(m, 1 - d / 0.5); } return Math.max(m, storm(t) * 0.25 * (t < B[3] ? 1 : 0)); }
+function shake(t) { let m = 0; for (const c of [...CUTS, SPEEDUP]) { const d = t - c; if (d >= 0 && d < 0.5) m = Math.max(m, 1 - d / 0.5); } return Math.max(m, storm(t) * 0.25 * (t > STORM && t < HURR ? 1 : 0), t > VOLC0 && t < VOLC1 ? 0.7 : 0); }
 function zoomAt(t) { let base = 1; for (const k in S) { const [a, b] = S[k]; if (t >= a && t < b) base = 1 + 0.06 * ease(inv(a, b, t)); } let p = 0; for (const c of [...CUTS, SPEEDUP]) { const d = t - c; if (d >= 0 && d < 0.6) p = Math.max(p, 0.08 * (1 - easeOut(d / 0.6))); } return base + p; }
+
+
+// ============================================================
+//  SHOTS
+// ============================================================
+function globeShot(t) {
+  const m = ease(inv(MIGRATE[0], MIGRATE[1], t)), ring = ease(inv(B[4] + 0.6, RING + 0.8, t)), flat = ease(inv(B[4] + 0.8, B[4] + 3.5, t));
+  let R = 360, cy = 1240;
+  if (t < SPLIT) R = lerp(320, 420, ease(inv(B[3], SPLIT, t)));                 // Kamera fährt heran
+  else if (t < VOLC0) R = lerp(430, 360, ease(inv(B[4], VOLC0, t)));            // leicht zurück
+  else R = lerp(470, 330, ease(inv(VOLC1, B[5] + 1.5, t)));                      // großer Rückflug
+  drawSpace(t, 1, 0);
+  const g = { cx: W / 2, cy, R, fx: 1 + 0.05 * flat, fy: 1 - 0.12 * flat, rot: spin(t), dry: lerp(lerp(90, 42, m), 32, ring), flood: lerp(lerp(0, 22, m), 30, ring), volc: inv(B[4] + 1.6, B[4] + 2.6, t), eq: 1 };
+  drawGlobe(t, g); drawSpeedStreaks(t, g, 0.6);
+  // Pfeile: Wasser strömt zum Äquator
+  const ar = inv(MIGRATE[0], MIGRATE[0] + 0.5, t) * (1 - inv(SPLIT - 0.4, SPLIT, t));
+  if (ar > 0) {
+    ctx.save(); ctx.globalAlpha = ar; ctx.fillStyle = '#ffd400';
+    for (const side of [-1, 1]) for (let i = 0; i < 3; i++) {
+      const x = g.cx + (i - 1) * g.R * 0.5, k = (t * 1.2 + i * 0.3) % 1, y = g.cy + side * g.R * lerp(0.85, 0.25, k);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(side < 0 ? Math.PI : 0); ctx.globalAlpha = ar * (1 - Math.abs(k - 0.5) * 1.6);
+      ctx.beginPath(); ctx.moveTo(-18, 18); ctx.lineTo(18, 18); ctx.lineTo(0, -10); ctx.closePath(); ctx.fill(); ctx.fillRect(-7, 18, 14, 26); ctx.restore();
+    }
+    ctx.restore();
+  }
+  if (flat > 0.05 && t < B[5]) { ctx.save(); ctx.globalAlpha = flat * 0.9 * (t < VOLC0 || t > VOLC1 ? 1 : 0); strokeText('(Abplattung übertrieben dargestellt)', W / 2, 1745, 32, '#cfd8e8', 700, 8); ctx.restore(); }
+}
+function hookShot(t) {
+  const warp = inv(SPEEDUP, SPEEDUP + 0.3, t) * (1 - inv(SPEEDUP + 0.9, B[1], t) * 0.6);
+  drawSpace(t, 1, warp, W / 2, 1330);
+  const R = lerp(170, 290, ease(inv(0, SPEEDUP, t))) + 25 * inv(SPEEDUP, SPEEDUP + 0.2, t) * (1 - inv(SPEEDUP + 0.2, SPEEDUP + 0.8, t));
+  const g = { cx: W / 2, cy: 1330, R, fx: 1, fy: 1, rot: spin(t), dry: 90, flood: 0, volc: 0, eq: inv(0.3, 0.6, t) };
+  drawGlobe(t, g); drawSpeedStreaks(t, g, inv(SPEEDUP, SPEEDUP + 0.4, t));
+}
+// --- Kalender: 365 -> 730 Tage ---
+const MONTHS = ['JAN', 'FEB', 'MÄR', 'APR', 'MAI', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEZ'];
+const pages = Array.from({ length: 46 }, (_, i) => ({ t: i * 0.06, dir: R() < 0.5 ? -1 : 1, vx: rr(300, 750), rot: rr(2, 6), n: 1 + Math.floor(rr(0, 30)) }));
+function calendarShot(t) {
+  const lt = t - CAL;
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1a2a6c'); g.addColorStop(1, '#090c26'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(W / 2, 1150); ctx.rotate(lt * 0.5);
+  for (let i = 0; i < 16; i++) { ctx.rotate(Math.PI / 8); ctx.fillStyle = i % 2 ? 'rgba(90,150,255,0.10)' : 'rgba(90,150,255,0.04)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-180, 1400); ctx.lineTo(180, 1400); ctx.fill(); }
+  ctx.restore();
+  const card = (x, y, w, h, rot, month, day, a = 1) => {
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.rotate(rot);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.roundRect(-w / 2 + 10, -h / 2 + 14, w, h, 24); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 24); ctx.fill();
+    ctx.fillStyle = '#ff3b4e'; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h * 0.26, [24, 24, 0, 0]); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = `900 ${h * 0.15}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(month, 0, -h / 2 + h * 0.13);
+    ctx.fillStyle = '#16192b'; ctx.font = `900 ${h * 0.46}px ${FONT}`; ctx.fillText(String(day), 0, h * 0.13);
+    ctx.restore();
+  };
+  // fliegende Seiten
+  for (const p of pages) {
+    const k = (lt - p.t) / 0.9; if (k < 0 || k > 1) continue;
+    card(W / 2 + p.dir * p.vx * k, 1150 - 950 * k + 500 * k * k, 300, 330, p.dir * p.rot * k, MONTHS[Math.floor(p.t * 20) % 12], p.n, 1 - k);
+  }
+  const day = 1 + Math.floor(lt * 40) % 30;
+  card(W / 2, 1150, 400, 440, Math.sin(lt * 9) * 0.03, MONTHS[Math.floor(lt * 3) % 12], day);
+  // Zähler 365 -> 730
+  const v = Math.round(lerp(365, 730, ease(inv(0.3, 1.9, lt))));
+  const pulse = 1 + 0.06 * Math.sin(lt * 14) * inv(0.3, 1.9, lt) * (1 - inv(1.9, 2.2, lt));
+  ctx.save(); ctx.translate(W / 2, 1490); ctx.scale(pulse, pulse); strokeText(v + ' TAGE', 0, 0, 120, v >= 730 ? '#ffd400' : '#3fd0ff', 900, 18); ctx.restore();
+  strokeText('pro Jahr', W / 2, 1590, 52, '#fff', 800, 10);
+}
+// --- Schlafzimmer: innere Uhr kommt nicht mit ---
+function bedroomShot(t) {
+  const day = daylight(t), ph = sunPhase(t), lt = t - B[2];
+  ctx.fillStyle = rgb(mix(hex('#141832'), hex('#e9d7b8'), day * 0.7)); ctx.fillRect(0, 0, W, H);
+  // Fenster
+  const wx = 600, wy = 900, ww = 380, wh = 360;
+  ctx.fillStyle = rgb(mix(hex('#050816'), hex('#6ec0ff'), day)); ctx.fillRect(wx, wy, ww, wh);
+  if (ph < 0.5) { const k = ph / 0.5; ctx.fillStyle = '#fff2b0'; ctx.beginPath(); ctx.arc(wx + k * ww, wy + wh * 0.75 - Math.sin(k * Math.PI) * wh * 0.55, 34, 0, 7); ctx.fill(); }
+  else { const k = (ph - 0.5) / 0.5; ctx.fillStyle = '#e8ecff'; ctx.beginPath(); ctx.arc(wx + k * ww, wy + wh * 0.75 - Math.sin(k * Math.PI) * wh * 0.55, 24, 0, 7); ctx.fill();
+         ctx.fillStyle = 'rgba(255,255,255,0.8)'; for (let i = 0; i < 14; i++) ctx.fillRect(wx + (i * 67) % ww, wy + (i * 41) % (wh * 0.7), 3, 3); }
+  ctx.strokeStyle = '#5a4030'; ctx.lineWidth = 16; ctx.strokeRect(wx, wy, ww, wh); ctx.beginPath(); ctx.moveTo(wx + ww / 2, wy); ctx.lineTo(wx + ww / 2, wy + wh); ctx.moveTo(wx, wy + wh / 2); ctx.lineTo(wx + ww, wy + wh / 2); ctx.stroke();
+  // Lichtstrahl
+  if (day > 0.05) { ctx.fillStyle = `rgba(255,240,190,${0.28 * day})`; ctx.beginPath(); ctx.moveTo(wx, wy + wh); ctx.lineTo(wx + ww, wy + wh); ctx.lineTo(wx + ww - 200, 1900); ctx.lineTo(wx - 420, 1900); ctx.fill(); }
+  // Boden
+  ctx.fillStyle = rgb(mix(hex('#20160f'), hex('#8a5a36'), day * 0.8)); ctx.fillRect(0, 1640, W, H - 1640);
+  // Bett
+  ctx.fillStyle = rgb(mix(hex('#2a1d14'), hex('#7a4b2c'), day * 0.8)); ctx.fillRect(60, 1240, 50, 420); ctx.fillRect(60, 1560, 720, 90);
+  ctx.fillStyle = rgb(mix(hex('#2b3350'), hex('#ffffff'), day * 0.8)); ctx.beginPath(); ctx.roundRect(110, 1480, 670, 90, 20); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(130, 1405, 190, 90, 40); ctx.fill();
+  // Kopf + Augen (auf/zu im Chaos-Takt)
+  const awake = Math.sin(lt * 4.2) > -0.2;
+  const hx = 235, hy = 1405;
+  ctx.fillStyle = '#f2c29b'; ctx.beginPath(); ctx.arc(hx, hy, 60, 0, 7); ctx.fill();
+  ctx.fillStyle = '#4a2c1a'; ctx.beginPath(); ctx.arc(hx - 10, hy - 22, 58, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
+  ctx.strokeStyle = '#2a1a10'; ctx.fillStyle = '#2a1a10'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  for (const ex of [-20, 20]) { if (awake) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(hx + ex, hy + 5, 13, 0, 7); ctx.fill(); ctx.fillStyle = '#2a1a10'; ctx.beginPath(); ctx.arc(hx + ex + Math.sin(lt * 7) * 4, hy + 5, 6, 0, 7); ctx.fill(); } else { ctx.beginPath(); ctx.moveTo(hx + ex - 10, hy + 6); ctx.lineTo(hx + ex + 10, hy + 6); ctx.stroke(); } }
+  // Decke mit Körper
+  ctx.fillStyle = rgb(mix(hex('#3a2a6a'), hex('#7b6cf0'), day * 0.8)); ctx.beginPath(); ctx.moveTo(280, 1500); ctx.quadraticCurveTo(420, 1400 + Math.sin(lt * 9) * 10 * awake, 600, 1440); ctx.quadraticCurveTo(760, 1460, 790, 1560); ctx.lineTo(260, 1560); ctx.closePath(); ctx.fill();
+  // Zzz bzw. ?!
+  ctx.save();
+  if (!awake) for (let i = 0; i < 3; i++) { const k = (lt * 1.5 + i / 3) % 1; ctx.globalAlpha = 1 - k; strokeText('Z', hx + 80 + k * 120 + i * 10, hy - 90 - k * 200, 50 + i * 14, '#fff', 900, 8); }
+  else { const k = (lt * 2) % 1; ctx.globalAlpha = 1 - k * 0.5; strokeText('?!', hx + 110, hy - 110 - k * 30, 90, '#ffd400', 900, 12); }
+  ctx.restore();
+  // Nachttisch + Wecker (klingelt)
+  ctx.fillStyle = rgb(mix(hex('#24180f'), hex('#6e4426'), day * 0.8)); ctx.fillRect(820, 1520, 180, 140);
+  const ring = Math.sin(lt * 2.5) > 0.3, sh = ring ? Math.sin(t * 80) * 6 : 0;
+  ctx.save(); ctx.translate(910 + sh, 1460);
+  ctx.fillStyle = '#ff3b4e'; ctx.beginPath(); ctx.arc(0, 0, 52, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(-38, -44, 18, 0, 7); ctx.arc(38, -44, 18, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 40, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 5; const an = (t - B[1]) / DAY_P * Math.PI * 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.sin(an) * 30, -Math.cos(an) * 30); ctx.stroke();
+  if (ring) { ctx.strokeStyle = '#ffd400'; ctx.lineWidth = 6; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(0, -10, 80, s < 0 ? Math.PI * 1.1 : Math.PI * 1.6, s < 0 ? Math.PI * 1.4 : Math.PI * 1.9); ctx.stroke(); } }
+  ctx.restore();
+}
+// --- Hurrikan aus dem All ---
+function hurricaneShot(t) {
+  const lt = t - HURR;
+  const g = ctx.createRadialGradient(W / 2, 1200, 100, W / 2, 1200, 1300); g.addColorStop(0, '#1d5fa8'); g.addColorStop(1, '#06204a'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#5c8a4a'; ctx.beginPath(); ctx.moveTo(-50, 1500); ctx.quadraticCurveTo(250, 1450, 330, 1700); ctx.quadraticCurveTo(380, 1850, 300, 2000); ctx.lineTo(-50, 2000); ctx.fill();
+  const cx = W / 2 + Math.sin(lt) * 20, cy = 1180, spinA = lt * (2.4 + lt * 1.2);
+  for (let arm = 0; arm < 4; arm++) for (let j = 70; j >= 0; j--) {
+    const a = arm * Math.PI / 2 + j * 0.11 - spinA, r = 28 + j * 9.5;
+    ctx.fillStyle = `rgba(255,255,255,${0.10 + 0.5 * (1 - j / 70)})`;
+    ctx.beginPath(); ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.92, 18 + j * 0.9, 0, 7); ctx.fill();
+  }
+  ctx.fillStyle = '#123a70'; ctx.beginPath(); ctx.arc(cx, cy, 28, 0, 7); ctx.fill();
+  ctx.save(); ctx.globalAlpha = inv(0.1, 0.4, lt);
+  ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.roundRect(60, 1640, 460, 80, 40); ctx.fill();
+  ctx.fillStyle = '#ff3b4e'; ctx.beginPath(); ctx.arc(100, 1680, 10 + Math.sin(t * 10) * 3, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = `800 38px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('SATELLIT LIVE', 128, 1681);
+  ctx.restore();
+}
+// --- Split-Screen: Äquator versinkt / Pol fällt trocken ---
+const cityB = Array.from({ length: 11 }, (_, i) => ({ x: -40 + i * 105 + rr(-10, 10), w: rr(80, 120), h: rr(380, 720), c: R() }));
+const debris = Array.from({ length: 10 }, () => ({ x: rr(0, W), s: rr(20, 50), ph: rr(0, 6), sp: rr(20, 60) }));
+function cityPanel(t) {
+  const sky = ctx.createLinearGradient(0, 0, 0, 1600); sky.addColorStop(0, '#2f9cf0'); sky.addColorStop(1, '#ffe9b8'); ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fff4c8'; ctx.beginPath(); ctx.arc(830, 1000, 70, 0, 7); ctx.fill();
+  for (const b of cityB) {
+    const top = 1600 - b.h;
+    ctx.fillStyle = rgb(mix(hex('#5c6f86'), hex('#8aa0b8'), b.c)); ctx.fillRect(b.x, top, b.w, b.h);
+    ctx.fillStyle = 'rgba(200,230,255,0.7)'; for (let y = top + 20; y < 1590; y += 40) for (let x = b.x + 12; x < b.x + b.w - 20; x += 28) ctx.fillRect(x, y, 14, 20);
+  }
+  // Palmen
+  for (const px of [60, 1000]) { ctx.strokeStyle = '#7a5530'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(px, 1620); ctx.quadraticCurveTo(px + 30, 1450, px + 10, 1330); ctx.stroke(); ctx.fillStyle = '#2f8f3a'; for (let i = 0; i < 6; i++) { ctx.save(); ctx.translate(px + 10, 1330); ctx.rotate(i * 1.05 + Math.sin(t * 2) * 0.1); ctx.beginPath(); ctx.ellipse(55, 0, 60, 16, 0, 0, 7); ctx.fill(); ctx.restore(); } }
+  // steigendes Wasser
+  const yw = lerp(1650, 1150, ease(inv(SPLIT, B[4], t)));
+  ctx.fillStyle = 'rgba(25,110,210,0.86)'; ctx.beginPath(); ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 20) ctx.lineTo(x, yw + Math.sin(x * 0.02 + t * 4) * 12); ctx.lineTo(W, H); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 5; ctx.beginPath(); for (let x = 0; x <= W; x += 20) ctx.lineTo(x, yw + Math.sin(x * 0.02 + t * 4) * 12); ctx.stroke();
+  for (const d of debris) { const x = (d.x + t * d.sp) % (W + 100) - 50, y = yw - 8 + Math.sin(t * 3 + d.ph) * 8; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 2 + d.ph) * 0.3); ctx.fillStyle = '#8a6a44'; ctx.fillRect(-d.s / 2, -d.s / 4, d.s, d.s / 2); ctx.restore(); }
+}
+function polePanel(t, h) {
+  const sky = ctx.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#9cc4e6'); sky.addColorStop(1, '#eaf3fb'); ctx.fillStyle = sky; ctx.fillRect(0, 0, W, h);
+  const recede = ease(inv(POLE, B[4], t));
+  ctx.fillStyle = '#2a6fb0'; ctx.fillRect(0, h * 0.30, W, lerp(70, 8, recede));                      // Meer zieht sich zurück
+  ctx.fillStyle = '#f2f6fa'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(80 + i * 220, h * 0.30); ctx.lineTo(140 + i * 220, h * 0.30 - 50 - (i % 2) * 30); ctx.lineTo(220 + i * 220, h * 0.30); ctx.fill(); }
+  ctx.fillStyle = '#cfa56c'; ctx.fillRect(0, h * 0.30 + lerp(70, 8, recede), W, h);                    // trockener Meeresboden
+  ctx.strokeStyle = 'rgba(110,80,40,0.6)'; ctx.lineWidth = 4;
+  for (let i = 0; i < 12; i++) { const x0 = (i * 97) % W, y0 = h * 0.5 + (i * 53) % (h * 0.45); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + 60, y0 + 20); ctx.lineTo(x0 + 110, y0 - 10); ctx.stroke(); }
+  // gestrandetes Schiff
+  ctx.save(); ctx.translate(680, h * 0.66); ctx.rotate(-0.12);
+  ctx.fillStyle = '#b4282e'; ctx.beginPath(); ctx.moveTo(-200, -40); ctx.lineTo(200, -40); ctx.lineTo(160, 40); ctx.lineTo(-170, 40); ctx.fill();
+  ctx.fillStyle = '#20232c'; ctx.fillRect(-200, -60, 400, 22);
+  ctx.fillStyle = '#f2f2f2'; ctx.fillRect(-60, -140, 140, 80); ctx.fillStyle = '#e0a020'; ctx.fillRect(20, -200, 34, 60);
+  ctx.restore();
+  // Fischskelett
+  ctx.save(); ctx.translate(230, h * 0.78); ctx.strokeStyle = '#f5efe0'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(-80, 0); ctx.lineTo(60, 0);
+  for (let i = -60; i < 50; i += 18) { ctx.moveTo(i, -24); ctx.lineTo(i + 6, 24); } ctx.stroke(); ctx.fillStyle = '#f5efe0'; ctx.beginPath(); ctx.moveTo(60, 0); ctx.lineTo(100, -26); ctx.lineTo(100, 26); ctx.fill(); ctx.restore();
+}
+function label(txt, x, y, col) { ctx.font = `900 44px ${FONT}`; const w = ctx.measureText(txt).width + 60; ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(x, y, w, 76, 38); ctx.fill(); ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x + 30, y + 39); }
+function splitShot(t) {
+  const sk = ease(inv(POLE - 0.1, POLE + 0.4, t)), topH = lerp(H, H * 0.55, sk);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, topH); ctx.clip(); ctx.translate(0, (topH - H) * 0.62); cityPanel(t); ctx.restore();
+  ctx.save(); ctx.globalAlpha = inv(SPLIT + 0.2, SPLIT + 0.5, t); label('ÄQUATOR: Land versinkt', 50, Math.min(topH - 120, 1380), '#e8572a'); ctx.restore();
+  if (sk > 0) {
+    const h = H - topH;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, topH, W, h); ctx.clip(); ctx.translate(0, topH); polePanel(t, H * 0.45); ctx.restore();
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, topH - 4, W, 8);
+    ctx.save(); ctx.globalAlpha = sk; label('POL: neues Land', 50, topH + 40, '#1f8fd6'); ctx.restore();
+  }
+}
+// --- Vulkan-Nahaufnahme ---
+const lava = Array.from({ length: 160 }, () => ({ t0: rr(0, 1.4), vx: rr(-260, 260), vy: rr(-1100, -650), r: rr(5, 14) }));
+const ash = Array.from({ length: 40 }, () => ({ t0: rr(0, 1.4), dx: rr(-1, 1), r: rr(50, 130) }));
+function volcanoShot(t) {
+  const lt = t - VOLC0;
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1a0c10'); g.addColorStop(0.7, '#5a1a10'); g.addColorStop(1, '#2a0c08'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (const a of ash) { const k = clamp((lt - a.t0 * 0.6) / 1.2); if (k <= 0) continue; ctx.fillStyle = `rgba(50,40,45,${0.8 * (1 - k * 0.4)})`; ctx.beginPath(); ctx.arc(540 + a.dx * 200 * k, 1080 - k * 700, a.r * (0.4 + k), 0, 7); ctx.fill(); }
+  if (lt > 0.5 && lt < 0.62) { ctx.strokeStyle = '#d8e0ff'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(500, 520); ctx.lineTo(560, 640); ctx.lineTo(520, 700); ctx.lineTo(590, 820); ctx.stroke(); }
+  ctx.fillStyle = '#2b1a14'; ctx.beginPath(); ctx.moveTo(-50, 1800); ctx.lineTo(420, 1090); ctx.lineTo(660, 1090); ctx.lineTo(1130, 1800); ctx.fill();
+  const glow = ctx.createRadialGradient(540, 1090, 10, 540, 1090, 420); glow.addColorStop(0, 'rgba(255,200,80,0.9)'); glow.addColorStop(1, 'rgba(255,60,0,0)'); ctx.fillStyle = glow; ctx.fillRect(120, 670, 840, 840);
+  ctx.strokeStyle = '#ff7a1a'; ctx.lineWidth = 16; ctx.lineCap = 'round';
+  for (const [ex, ey] of [[300, 1800], [760, 1800], [520, 1800]]) { const k = ease(clamp(lt / 1.3)); ctx.beginPath(); ctx.moveTo(540, 1100); ctx.quadraticCurveTo((540 + ex) / 2 + 40, 1400, lerp(540, ex, k), lerp(1100, ey, k)); ctx.stroke(); }
+  for (const p of lava) { const k = lt - p.t0 * 0.8; if (k < 0 || k > 1.4) continue; const x = 540 + p.vx * k, y = 1090 + p.vy * k + 900 * k * k; ctx.fillStyle = k < 0.5 ? '#ffe27a' : '#ff6a1a'; ctx.beginPath(); ctx.arc(x, y, p.r, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#140a08'; ctx.fillRect(0, 1780, W, H - 1780);
+}
+function drawShot(t) {
+  if (t < B[1]) return hookShot(t);
+  if (t < CAL) return drawLandscape(t);
+  if (t < B[2]) return calendarShot(t);
+  if (t < STORM) return bedroomShot(t);
+  if (t < HURR) return drawLandscape(t);
+  if (t < B[3]) return hurricaneShot(t);
+  if (t < SPLIT) return globeShot(t);
+  if (t < B[4]) return splitShot(t);
+  if (t < VOLC0) return globeShot(t);
+  if (t < VOLC1) return volcanoShot(t);
+  return globeShot(t);
+}
+// Wisch-Übergang zwischen Einstellungen
+function drawWipe(t) {
+  for (const w of WIPES) {
+    const k = (t - w) / 0.36 + 0.5; if (k < 0 || k > 1) continue;
+    const x = lerp(-2300, 1500, k);
+    const gr = ctx.createLinearGradient(x, 0, x + 2200, 0); gr.addColorStop(0, 'rgba(63,208,255,0)'); gr.addColorStop(0.15, 'rgba(63,208,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,1)'); gr.addColorStop(0.85, 'rgba(63,208,255,1)'); gr.addColorStop(1, 'rgba(63,208,255,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x + 400, 0); ctx.lineTo(x + 2200, 0); ctx.lineTo(x + 1800, H); ctx.lineTo(x, H); ctx.fill();
+  }
+}
 
 // ---------- main ----------
 function renderFrame(t) {
@@ -426,25 +650,14 @@ function renderFrame(t) {
   ctx.save();
   const z = zoomAt(t), sh = shake(t) * 14;
   ctx.translate(W / 2 + Math.sin(t * 73) * sh, H * 0.62 + Math.cos(t * 61) * sh); ctx.scale(z, z); ctx.translate(-W / 2, -H * 0.62);
-  if (t < B[1]) {
-    drawSpace(t);
-    const g = { cx: W / 2, cy: 1330, R: 300, fx: 1, fy: 1, rot: spin(t), dry: 90, flood: 0, volc: 0, eq: inv(0.3, 0.6, t) };
-    drawGlobe(t, g); drawSpeedStreaks(t, g, inv(SPEEDUP, SPEEDUP + 0.4, t));
-  } else if (t < B[3]) {
-    drawLandscape(t);
-  } else {
-    drawSpace(t);
-    const m = ease(inv(MIGRATE[0], MIGRATE[1], t)), ring = ease(inv(B[4] + 0.6, RING + 0.8, t)), flat = ease(inv(B[4] + 0.8, B[4] + 3.5, t));
-    const g = { cx: W / 2, cy: 1240, R: 360, fx: 1 + 0.05 * flat, fy: 1 - 0.12 * flat, rot: spin(t), dry: lerp(lerp(90, 42, m), 32, ring), flood: lerp(lerp(0, 22, m), 30, ring), volc: inv(B[4] + 1.6, B[4] + 2.6, t), eq: 1 };
-    drawGlobe(t, g); drawSpeedStreaks(t, g, 0.6);
-    if (flat > 0.05 && t < B[5]) { ctx.save(); ctx.globalAlpha = flat * 0.9; strokeText('(Abplattung übertrieben dargestellt)', W / 2, 1720, 32, '#cfd8e8', 700, 8); ctx.restore(); }
-  }
+  drawShot(t);
   ctx.restore();
   const tg = ctx.createLinearGradient(0, 0, 0, 1100); tg.addColorStop(0, 'rgba(0,0,0,0.5)'); tg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = tg; ctx.fillRect(0, 0, W, 1100);
   const vg = ctx.createRadialGradient(W / 2, H / 2, 500, W / 2, H / 2, 1250); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
   drawHook(t); drawTimeline(t); drawClock(t);
   for (const sc of SCENES) drawSceneText(t, sc);
   drawOutro(t);
+  drawWipe(t);
   const fl = flash(t); if (fl > 0) { ctx.fillStyle = `rgba(255,255,255,${fl * 0.9})`; ctx.fillRect(0, 0, W, H); }
   ctx.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = (t * 300) % 6; y < H; y += 6) ctx.fillRect(0, y, W, 1);
 }

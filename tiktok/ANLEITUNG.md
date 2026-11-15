@@ -6,7 +6,8 @@ Format: TikTok 1080×1920, 30 fps, **30–40 s**, Deutsch. Ordner pro Folge: `ti
 1. **Hook (0–3 s):** Frage „WAS WÄRE, WENN …?" Wort für Wort, Schlüsselwort farbig.
 2. **4 Zeitsprünge** mit Titel-Stempel („NACH 1 TAG" …), Fortschrittsleiste oben, rotem Zähler, 2 Fakt-Karten pro Szene (Karaoke-Text, *Schlüsselwort* gelb).
 3. **Outro (~4 s):** Frage an Zuschauer + „Schreib's in die Kommentare" + „Folge für Teil N+1".
-4. Visuell: eine durchgehende, animierte Welt, die sich verändert; Flash + Zoom-Punch + Shake an jedem Schnitt; großer Story-Moment pro Szene.
+4. Visuell: **viel Abwechslung** (Wunsch des Nutzers) – pro Szene 2–3 verschiedene Einstellungen (z.B. Landschaft → Nahaufnahme → Ansicht aus dem All → Split-Screen → Innenraum mit Figur), etwa alle 2–4 s ein neues Bild. Wechsel genau auf passende Wörter des Sprechers legen. Flash + Zoom-Punch an Szenenwechseln, Wisch-Übergang (`drawWipe`) zwischen Einstellungen. Vorlage: `erde-dreht-schneller/scene.html` (`drawShot`).
+4b. Schlussfrage: zur Folge passend, möglichst Entweder-oder („Wo würdest DU leben: X oder Y?") oder persönlich („Was tust DU als Erstes?") – nicht jedes Mal dieselbe Frage.
 5. Text-Sicherheitszonen: nichts Wichtiges rechts > x 950 und unten > y 1500 (TikTok-Buttons/Caption).
 6. Fakten müssen stimmen (populärwissenschaftlicher Konsens), keine erfundenen Zahlen.
 
