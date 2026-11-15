@@ -2,7 +2,14 @@
 
 Format: TikTok 1080×1920, 30 fps, **30–40 s**, Deutsch. Ordner pro Folge: `tiktok/<slug>/`.
 
-## Aufbau jeder Folge (bewährt aus Teil 1 + 2)
+## Aktuelles Format: „Ein Tag als …" / „Die letzten Stunden von …" (Vorlage: `gladiator/`)
+- Hook (≈4 s): „EIN TAG ALS [ROLLE]" + Ort/Epoche + „Würdest DU überleben?" mit Fahrt in die Welt hinein.
+- 4 Uhrzeit-Szenen (z.B. 06:00 / 12:00 / 15:00 / 16:00 + Titel) statt Zeitsprüngen; Timeline-Knoten = Uhrzeiten; rote Pille = Ort.
+- Pro Szene 2–5 Einstellungen mit Figuren (Funktion `gladiator()` als Beispiel für eine Figur mit Posen), Nahaufnahmen von Gegenständen, große Stempel/Zahlen, Wisch-Übergänge.
+- Echte, überraschende Fakten (mit Quellenlage im README), Mythen aufklären.
+- Outro: Entweder-oder-Frage passend zur Rolle („SCHWERT oder DREIZACK?").
+
+## Aufbau (altes Format „Was wäre, wenn …?", bewährt aus Teil 1 + 2)
 1. **Hook (0–3 s):** Frage „WAS WÄRE, WENN …?" Wort für Wort, Schlüsselwort farbig.
 2. **4 Zeitsprünge** mit Titel-Stempel („NACH 1 TAG" …), Fortschrittsleiste oben, rotem Zähler, 2 Fakt-Karten pro Szene (Karaoke-Text, *Schlüsselwort* gelb).
 3. **Outro (~4 s):** Frage an Zuschauer + „Schreib's in die Kommentare" + „Folge für Teil N+1".
