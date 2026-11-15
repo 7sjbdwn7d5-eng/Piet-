@@ -4,8 +4,9 @@ import numpy as np, wave, sys
 from scipy.signal import butter, sosfilt, fftconvolve
 
 SR = 44100
-B = [0, 3.0, 10.0, 17.0, 23.6, 31.6, 36.5]          # Schnitte im Video (= VIDEO_BOUNDS)
-SB = [0, 3.6, 12.2, 20.8, 29.8, 39.2, 44]           # dieselben Schnitte in Szenen-Zeit (= SCENE_BOUNDS)
+B = [0, 3.4, 10.8, 18.35, 24.5, 32.95, 38.5]        # Schnitte im Video
+SB = [0, 3.6, 12.2, 20.8, 29.8, 39.2, 44]           # dieselben Schnitte in Szenen-Zeit
+MB = [0, 2.45] + B[1:]; MS = [0, 2.1] + SB[1:]       # Zeit-Abbildung inkl. Verschwinde-Moment (= VIDEO_/SCENE_BOUNDS)
 DUR = B[-1]
 n = int(SR * DUR)
 out = np.zeros((n, 2))
@@ -13,9 +14,9 @@ rng = np.random.default_rng(42)
 
 def v(ts):
     """Szenen-Zeit -> Video-Zeit"""
-    for i in range(len(SB) - 1):
-        if ts < SB[i + 1] or i == len(SB) - 2:
-            return B[i] + (ts - SB[i]) / (SB[i + 1] - SB[i]) * (B[i + 1] - B[i])
+    for i in range(len(MS) - 1):
+        if ts < MS[i + 1] or i == len(MS) - 2:
+            return MB[i] + (ts - MS[i]) / (MS[i + 1] - MS[i]) * (MB[i + 1] - MB[i])
 
 def filt(x, lo=None, hi=None, order=4):
     if lo and hi: sos = butter(order, [lo, hi], 'bandpass', fs=SR, output='sos')
@@ -48,7 +49,7 @@ def reverb(sig, decay=1.2, mix=0.35):
     dry = np.concatenate([sig, np.zeros(L)])
     return dry * (1 - mix) + wet * mix
 
-VANISH = 1.75   # Menschen verschwinden
+VANISH = 2.45   # Menschen verschwinden
 
 # ---------------- HOOK: Stadt-Lärm, der schlagartig verstummt ----------------
 d = VANISH
