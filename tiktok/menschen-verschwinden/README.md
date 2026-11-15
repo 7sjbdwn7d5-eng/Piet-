@@ -1,6 +1,6 @@
 # TikTok: „Was wäre, wenn plötzlich alle Menschen verschwinden?"
 
-**Finale Fassung (empfohlen):** `erde_ohne_menschen_final.mp4` – 38,5 s, 1080×1920 (9:16), 30 fps
+**Finale Fassung (empfohlen):** `erde_ohne_menschen_final.mp4` – 40 s, 1080×1920 (9:16), 30 fps
 - Erzähler: ElevenLabs „Brian" (Deutsch, `sprecher_brian.mp3`), Szenenwechsel exakt auf seine Sätze gelegt (Schnitte bei 3,4 / 10,8 / 18,35 / 24,5 / 32,95 s)
 - Hintergrund-Nachrichtenstimme (Stimme „Kerstin"): TV-Eilmeldung, die beim Verschwinden mitten im Wort abbricht; Lautsprecher-Durchsage zum Stromausfall; automatische Reaktor-Warnung
 - Soundeffekte: Stadtlärm/Hupen → plötzliche Stille, Strom-Brummen & Knistern, Power-Down, Wasser, Sirene, Geigerzähler, Grillen, Heulen, Wind, Vögel, reißender Asphalt, Einstürze, Krähen, Flügelschlag, Pops bei Texteinblendungen

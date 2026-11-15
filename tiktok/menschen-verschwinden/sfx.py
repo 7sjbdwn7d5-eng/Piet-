@@ -4,7 +4,7 @@ import numpy as np, wave, sys
 from scipy.signal import butter, sosfilt, fftconvolve
 
 SR = 44100
-B = [0, 3.4, 10.8, 18.35, 24.5, 32.95, 38.5]        # Schnitte im Video
+B = [0, 3.4, 10.8, 18.35, 24.5, 32.95, 40.0]        # Schnitte im Video
 SB = [0, 3.6, 12.2, 20.8, 29.8, 39.2, 44]           # dieselben Schnitte in Szenen-Zeit
 MB = [0, 2.45] + B[1:]; MS = [0, 2.1] + SB[1:]       # Zeit-Abbildung inkl. Verschwinde-Moment (= VIDEO_/SCENE_BOUNDS)
 DUR = B[-1]
