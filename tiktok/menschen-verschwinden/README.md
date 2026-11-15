@@ -1,6 +1,10 @@
 # TikTok: „Was wäre, wenn plötzlich alle Menschen verschwinden?"
 
-**Video mit Sprecher (empfohlen):** `erde_ohne_menschen_sprecher.mp4` – 36,5 s, 1080×1920 (9:16), 30 fps, deutscher Sprecher + Soundtrack (Musik wird unter der Stimme automatisch leiser).
+**Finale Fassung (empfohlen):** `erde_ohne_menschen_final.mp4` – 36,5 s, 1080×1920 (9:16), 30 fps
+- Erzähler (Stimme „Thorsten") vorne
+- Hintergrund-Nachrichtenstimme (Stimme „Kerstin"): TV-Eilmeldung, die beim Verschwinden mitten im Wort abbricht; Lautsprecher-Durchsage zum Stromausfall; automatische Reaktor-Warnung
+- Soundeffekte: Stadtlärm/Hupen → plötzliche Stille, Strom-Brummen & Knistern, Power-Down, Wasser, Sirene, Geigerzähler, Grillen, Heulen, Wind, Vögel, reißender Asphalt, Einstürze, Krähen, Flügelschlag, Pops bei Texteinblendungen
+- Musik/Effekte/Nachrichten werden unter dem Erzähler automatisch leiser (Ducking), Lautheit ≈ −12 LUFS
 
 **Erste Fassung ohne Sprecher:** `erde_ohne_menschen.mp4` – 44 s.
 
@@ -35,9 +39,12 @@ Was bleibt von uns übrig? 🌍⏳ #waswärewenn #erdeohnemenschen #wissen #fakt
 ```bash
 pip install piper-tts
 curl -L -o v.tar.gz https://github.com/rhasspy/piper/releases/download/v0.0.2/voice-de-thorsten-low.tar.gz && tar xzf v.tar.gz
-python3 voice.py de-thorsten-low.onnx voice.wav
-python3 audio.py music.wav
-node render.js video_noaudio.mp4
-ffmpeg -i music.wav -i voice.wav -filter_complex "[1:a]apad=whole_dur=36.5[vp];[0:a]volume=0.55[m];[vp]asplit=2[v][sc];[m][sc]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=350[md];[md][v]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.95[a]" -map "[a]" -t 36.5 mix.wav
-ffmpeg -i video_noaudio.mp4 -i mix.wav -c:v copy -c:a aac -b:a 192k erde_ohne_menschen_sprecher.mp4
+curl -L -o k.tar.gz https://github.com/rhasspy/piper/releases/download/v0.0.2/voice-de-kerstin-low.tar.gz && tar xzf k.tar.gz
+pip install scipy
+python3 voice.py de-thorsten-low.onnx voice.wav    # Erzähler
+python3 news.py de-kerstin-low.onnx news.wav       # Nachrichten / Durchsagen
+python3 sfx.py sfx.wav                             # Soundeffekte
+python3 audio.py music.wav                         # Musik
+node render.js video_noaudio.mp4                   # Bild
+./mix.sh music.wav sfx.wav news.wav voice.wav video_noaudio.mp4 erde_ohne_menschen_final.mp4
 ```
