@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Erde dreht schneller</title>
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// ============================================================
+//  Teil 2 (neu): "Was wäre, wenn sich die Erde doppelt so schnell drehen würde?"
+//  renderFrame(t) zeichnet das Bild zur Video-Zeit t (Sekunden).
+// ============================================================
+const W = 1080, H = 1920;
+const ctx = document.getElementById('c').getContext('2d');
+const FONT = '"Inter", "Inter Display", sans-serif';
+
+const B = [0, 3.4, 9.2, 15.4, 22.7, 29.8, 35.0];          // Schnitte (Video-Zeit)
+const S = { hook: [B[0], B[1]], now: [B[1], B[2]], week: [B[2], B[3]], year: [B[3], B[4]], tenk: [B[4], B[5]], outro: [B[5], B[6]] };
+const SPEEDUP = 1.65;     // Hook: "... doppelt so schnell ..."
+const STORM = 12.5;       // "Und Stürme drehen sich schneller ..."
+const MIGRATE = [16.3, 21.6];   // Meere wandern zum Äquator
+const RING = 26.6;        // "Ein einziger Ozean umspannt den Äquator"
+const DAY_P = 2.6;        // ein 12-Stunden-Tag dauert im Zeitraffer 2,6 s
+window.DURATION = B[6];
+
+const fmt = n => n.toLocaleString('de-DE');
+const SCENES = [
+  { key: 'now', pre: '', big: 'SOFORT', node: 'Sofort',
+    counter: lt => 'TAG ' + (1 + Math.floor(lt / DAY_P)) + ' VON 730',
+    facts: [{ at: 1.2, text: 'Ein Tag dauert nur noch *12 Stunden*.' },
+            { at: 3.0, text: 'Und ein Jahr hat *730 Tage*.' }] },
+  { key: 'week', pre: 'NACH', big: '1 WOCHE', node: '1 Woche',
+    counter: lt => 'TAG ' + Math.min(14, 1 + Math.floor(14 * lt / 5.8)) + ' VON 14',
+    facts: [{ at: 1.0, text: 'Unsere *innere Uhr* kommt nicht mehr mit.' },
+            { at: STORM - B[2] + 0.1, text: 'Stürme drehen sich schneller und werden *heftiger*.' }] },
+  { key: 'year', pre: 'NACH', big: '1 JAHR', node: '1 Jahr',
+    counter: lt => 'TAG ' + fmt(Math.min(730, 1 + Math.floor(730 * lt / 7))),
+    facts: [{ at: 1.0, text: 'Die Fliehkraft schiebt die *Meere* zum Äquator.' },
+            { at: 3.8, text: 'Länder am Äquator *versinken*. An den Polen taucht Land auf.' }] },
+  { key: 'tenk', pre: 'NACH', big: '10.000 JAHREN', node: '10.000 J.',
+    counter: lt => 'JAHR ' + fmt(Math.max(1, Math.round(Math.pow(clamp(lt / 6.5), 2.5) * 10000 / 10) * 10)),
+    facts: [{ at: 1.0, text: 'Die Erde wird *platter*. Vulkane brechen aus.' },
+            { at: RING - B[4] + 0.2, text: 'Ein einziger *Ozean* umspannt den Äquator.' }] },
+];
+
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const inv = (a, b, x) => clamp((x - a) / (b - a));
+const ease = k => k * k * (3 - 2 * k);
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+const backOut = k => { const c1 = 2.2, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+function hex(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function mix(c1, c2, k) { return [lerp(c1[0], c2[0], k), lerp(c1[1], c2[1], k), lerp(c1[2], c2[2], k)]; }
+function rgb(c, a = 1) { return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`; }
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const R = rng(77); const rr = (a, b) => lerp(a, b, R());
+const D2R = Math.PI / 180;
+
+// ============================================================
+//  GLOBUS (Weltall-Ansicht)
+// ============================================================
+const CONT = {
+  africa: [[37, -10], [37, 10], [32, 32], [12, 44], [11, 51], [-10, 40], [-26, 33], [-35, 20], [-17, 12], [-5, 12], [5, 9], [5, -8], [15, -17], [27, -13]],
+  europe: [[36, -9], [43, -9], [48, -4], [54, 8], [57, 8], [64, 12], [71, 26], [69, 42], [60, 58], [47, 42], [41, 29], [38, 23], [40, 18], [44, 12], [43, 4], [37, -2]],
+  asia: [[47, 42], [60, 58], [73, 80], [77, 105], [70, 160], [65, 178], [58, 160], [52, 141], [40, 130], [31, 122], [22, 112], [10, 106], [2, 103], [16, 95], [22, 90], [20, 73], [25, 57], [13, 45], [28, 35], [37, 36]],
+  namerica: [[70, -160], [71, -125], [70, -85], [60, -64], [46, -60], [35, -76], [25, -80], [29, -90], [19, -96], [9, -79], [15, -92], [21, -106], [32, -117], [48, -125], [58, -137], [60, -150]],
+  samerica: [[12, -72], [8, -60], [-5, -35], [-23, -41], [-38, -57], [-55, -68], [-46, -75], [-18, -71], [-5, -81], [6, -78]],
+  australia: [[-12, 130], [-11, 142], [-25, 153], [-38, 146], [-35, 117], [-22, 114], [-14, 126]],
+  greenland: [[60, -45], [70, -22], [82, -30], [80, -65], [70, -55]],
+};
+const contCols = { africa: '#6fa84a', europe: '#5f9e48', asia: '#79a94d', namerica: '#5d9a45', samerica: '#4f9a3f', australia: '#c5a35a', greenland: '#e8eef5' };
+const volcanoes = Array.from({ length: 16 }, () => ({ lat: rr(-55, 60), lon: rr(-180, 180), ph: rr(0, 6) }));
+const spaceStars = Array.from({ length: 650 }, () => ({ x: rr(0, W), y: rr(0, H), r: rr(0.5, 2.4), b: rr(0.25, 1) }));
+const clouds = Array.from({ length: 14 }, () => ({ lat: rr(-60, 60), lon: rr(-180, 180), r: rr(0.05, 0.12) }));
+
+function spin(t) {   // Drehwinkel des Globus in Grad
+  const s0 = 18, s1 = 36;            // Grad pro Sekunde (normal, doppelt)
+  const a = SPEEDUP, b = SPEEDUP + 0.6;
+  if (t < a) return s0 * t;
+  if (t < b) { const k = (t - a) / (b - a); return s0 * a + (s0 * (t - a) + (s1 - s0) * (t - a) * k / 2); }
+  return s0 * a + (s0 + s1) / 2 * (b - a) + s1 * (t - b);
+}
+function proj(lat, lon, g) {
+  const la = lat * D2R, lo = (lon - g.rot) * D2R;
+  const z = Math.cos(la) * Math.cos(lo);
+  let x = Math.cos(la) * Math.sin(lo);
+  if (z < 0) x = Math.sign(x || 1) * Math.cos(la);     // hinter dem Rand: auf den Rand legen
+  return [g.cx + g.R * g.fx * x, g.cy - g.R * g.fy * Math.sin(la), z];
+}
+function latY(lat, g) { return g.cy - g.R * g.fy * Math.sin(lat * D2R); }
+function drawGlobe(t, g) {
+  // Atmosphären-Glow
+  const halo = ctx.createRadialGradient(g.cx, g.cy, g.R * 0.95, g.cx, g.cy, g.R * 1.3);
+  halo.addColorStop(0, 'rgba(110,180,255,0.55)'); halo.addColorStop(1, 'rgba(110,180,255,0)');
+  ctx.save(); ctx.translate(g.cx, g.cy); ctx.scale(g.fx, g.fy); ctx.translate(-g.cx, -g.cy);
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R * 1.3, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R, 0, 7); ctx.restore();
+  ctx.save(); ctx.clip();
+  // Ozean
+  const og = ctx.createRadialGradient(g.cx - g.R * 0.3, g.cy - g.R * 0.3, g.R * 0.1, g.cx, g.cy, g.R * 1.05);
+  og.addColorStop(0, '#3fa0ff'); og.addColorStop(1, '#0b3a8a');
+  ctx.fillStyle = og; ctx.fillRect(g.cx - g.R * 2, g.cy - g.R * 2, g.R * 4, g.R * 4);
+  // trockener Meeresboden an den Polen (Wasser ist zum Äquator gewandert)
+  if (g.dry < 90) {
+    ctx.fillStyle = '#c8a06a';
+    ctx.fillRect(g.cx - g.R * 2, g.cy - g.R * 2, g.R * 4, latY(g.dry, g) - (g.cy - g.R * 2));
+    ctx.fillRect(g.cx - g.R * 2, latY(-g.dry, g), g.R * 4, g.R * 4);
+    // sandige Übergangszone
+    const fz = 6;
+    ctx.fillStyle = 'rgba(200,160,106,0.5)';
+    ctx.fillRect(g.cx - g.R * 2, latY(g.dry, g), g.R * 4, latY(g.dry - fz, g) - latY(g.dry, g));
+    ctx.fillRect(g.cx - g.R * 2, latY(-g.dry + fz, g), g.R * 4, latY(-g.dry, g) - latY(-g.dry + fz, g));
+  }
+  // Antarktis
+  ctx.fillStyle = '#eef3f8'; ctx.fillRect(g.cx - g.R * 2, latY(-70, g), g.R * 4, g.R * 4);
+  // Kontinente
+  for (const [name, poly] of Object.entries(CONT)) {
+    const pts = [];
+    for (let i = 0; i < poly.length; i++) {
+      const [a1, b1] = poly[i], [a2, b2] = poly[(i + 1) % poly.length];
+      for (let k = 0; k < 6; k++) pts.push(proj(lerp(a1, a2, k / 6), lerp(b1, b2, k / 6), g));
+    }
+    if (pts.every(p => p[2] < 0)) continue;
+    ctx.fillStyle = contCols[name];
+    ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fill();
+  }
+  // überflutete Äquator-Zone
+  if (g.flood > 0.5) {
+    const y0 = latY(g.flood, g), y1 = latY(-g.flood, g);
+    const fg = ctx.createLinearGradient(0, y0, 0, y1);
+    fg.addColorStop(0, 'rgba(30,110,230,0.55)'); fg.addColorStop(0.15, 'rgba(25,100,220,0.92)'); fg.addColorStop(0.85, 'rgba(25,100,220,0.92)'); fg.addColorStop(1, 'rgba(30,110,230,0.55)');
+    ctx.fillStyle = fg; ctx.fillRect(g.cx - g.R * 2, y0, g.R * 4, y1 - y0);
+    // Wellenlinien = Bewegung des Wassers
+    ctx.strokeStyle = 'rgba(200,230,255,0.35)'; ctx.lineWidth = 3;
+    for (let i = 0; i < 6; i++) { const yy = lerp(y0, y1, (i + 0.5) / 6); ctx.beginPath(); for (let x = g.cx - g.R; x <= g.cx + g.R; x += 20) ctx.lineTo(x, yy + Math.sin(x * 0.04 + t * 6 + i) * 4); ctx.stroke(); }
+  }
+  // Wolken
+  for (const c of clouds) { const p = proj(c.lat, c.lon + t * 8, g); if (p[2] < 0.1) continue; ctx.fillStyle = `rgba(255,255,255,${0.35 * p[2]})`; ctx.beginPath(); ctx.ellipse(p[0], p[1], c.r * g.R * 1.6, c.r * g.R * 0.6, 0, 0, 7); ctx.fill(); }
+  // Vulkane
+  if (g.volc > 0) for (const v of volcanoes) {
+    const p = proj(v.lat, v.lon, g); if (p[2] < 0.15) continue;
+    const a = g.volc * (0.6 + 0.4 * Math.sin(t * 9 + v.ph));
+    const vg = ctx.createRadialGradient(p[0], p[1], 2, p[0], p[1], 34); vg.addColorStop(0, `rgba(255,220,120,${a})`); vg.addColorStop(0.35, `rgba(255,70,20,${a * 0.8})`); vg.addColorStop(1, 'rgba(255,40,0,0)');
+    ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(p[0], p[1], 34, 0, 7); ctx.fill();
+  }
+  // Schatten (Tag/Nacht-Seite) + Licht
+  const sh = ctx.createLinearGradient(g.cx - g.R, 0, g.cx + g.R, 0); sh.addColorStop(0, 'rgba(255,255,255,0.10)'); sh.addColorStop(0.55, 'rgba(0,0,20,0)'); sh.addColorStop(1, 'rgba(0,0,25,0.6)');
+  ctx.fillStyle = sh; ctx.fillRect(g.cx - g.R * 2, g.cy - g.R * 2, g.R * 4, g.R * 4);
+  ctx.restore();
+  // Äquator-Linie
+  if (g.eq > 0) {
+    ctx.save(); ctx.globalAlpha = g.eq; ctx.setLineDash([16, 12]); ctx.strokeStyle = '#ffd400'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(g.cx - g.R * g.fx - 30, g.cy); ctx.lineTo(g.cx + g.R * g.fx + 30, g.cy); ctx.stroke(); ctx.restore();
+  }
+}
+function drawSpeedStreaks(t, g, amt) {
+  if (amt <= 0) return;
+  ctx.save(); ctx.strokeStyle = `rgba(160,210,255,${0.55 * amt})`; ctx.lineCap = 'round';
+  for (let i = 0; i < 9; i++) {
+    const lat = -60 + i * 15, y = latY(lat, g), rx = g.R * Math.cos(lat * D2R) * g.fx + 40;
+    const ph = (t * 3 + i * 0.37) % 1;
+    ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(g.cx, y, rx, 14, 0, Math.PI * (0.1 + ph * 0.3), Math.PI * (0.45 + ph * 0.3)); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawSpace(t, alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#02030b'; ctx.fillRect(0, 0, W, H);
+  for (const s of spaceStars) { ctx.fillStyle = `rgba(255,255,255,${s.b * (0.7 + 0.3 * Math.sin(t * 2 + s.x))})`; ctx.fillRect(s.x, s.y, s.r, s.r); }
+  ctx.restore();
+}
+
+// ============================================================
+//  LANDSCHAFT im Zeitraffer (Tag/Nacht rasen vorbei)
+// ============================================================
+const HORIZON = 1360;
+const stars = Array.from({ length: 360 }, () => ({ x: rr(0, W), y: rr(0, HORIZON), r: rr(0.6, 2.4), tw: rr(0, 6.3), b: rr(0.3, 0.9) }));
+const mountains = Array.from({ length: 24 }, (_, i) => [i * 50 - 40, HORIZON - 120 - Math.abs(Math.sin(i * 1.7) * 150) - rr(0, 80)]);
+const houses = [{ x: 90, y: 1470, w: 120, h: 90, c: '#d9734e' }, { x: 240, y: 1440, w: 140, h: 110, c: '#e8c36a' }, { x: 410, y: 1480, w: 110, h: 80, c: '#7fa7d9' }];
+const trees = [{ x: 60, y: 1700, s: 1.2 }, { x: 330, y: 1650, s: 0.9 }, { x: 480, y: 1760, s: 1.4 }, { x: 960, y: 1800, s: 1.3 }, { x: 180, y: 1820, s: 1.0 }, { x: 700, y: 1840, s: 1.1 }]
+  .map(tr => ({ ...tr, blobs: Array.from({ length: 8 }, () => ({ dx: rr(-1, 1), dy: rr(-1, 0.2), r: rr(0.35, 0.6), g: R() })) }));
+const flowers = Array.from({ length: 34 }, () => ({ x: rr(0, W), y: rr(1740, 1900), c: ['#ff5d7a', '#ffd23f', '#ffffff', '#b07cff'][Math.floor(R() * 4)], h: rr(30, 55) }));
+const rain = Array.from({ length: 260 }, () => ({ x: rr(-200, W + 200), y: rr(0, H), sp: rr(1400, 2200), l: rr(30, 60) }));
+const stormClouds = Array.from({ length: 16 }, () => ({ x: rr(-200, W + 200), y: rr(120, 900), s: rr(1, 2.2), sp: rr(220, 420) }));
+const lightning = [11.2, 13.3, 14.5];
+
+function sunPhase(t) {           // 0..1 innerhalb eines (Zeitraffer-)Tages
+  return (((t - B[1]) / DAY_P) + 0.18) % 1;
+}
+function daylight(t) {
+  const ph = sunPhase(t); // Tag: 0..0.5, Nacht: 0.5..1
+  const s = Math.sin(ph * 2 * Math.PI);
+  return clamp(s * 2.2 + 0.35);
+}
+function storm(t) { return ease(inv(STORM - 2.2, STORM, t)) * 0.45 + ease(inv(STORM, STORM + 1.2, t)) * 0.55; }
+
+function drawLandscape(t) {
+  const day = daylight(t), st = storm(t);
+  const ph = sunPhase(t);
+  // Himmel
+  const nightTop = hex('#03050f'), dayTop = hex('#2f86e0'), stormTop = hex('#2a2f3a');
+  let top = mix(nightTop, dayTop, day), mid = mix(hex('#0a1028'), hex('#7cc3f5'), day), bot = mix(hex('#141a36'), hex('#ffe3b0'), day);
+  const lowSun = day > 0 && day < 0.8 ? (1 - Math.abs(day - 0.4) / 0.4) : 0;
+  bot = mix(bot, hex('#ff8a3d'), lowSun * 0.7);
+  top = mix(top, mix(stormTop, hex('#05060a'), 1 - day), st * 0.8); mid = mix(mid, hex('#3a404c'), st * 0.75 * (0.4 + 0.6 * day)); bot = mix(bot, hex('#4a505a'), st * 0.6 * (0.4 + 0.6 * day));
+  const g = ctx.createLinearGradient(0, 0, 0, HORIZON); g.addColorStop(0, rgb(top)); g.addColorStop(0.6, rgb(mid)); g.addColorStop(1, rgb(bot));
+  ctx.fillStyle = g; ctx.fillRect(-200, -200, W + 400, HORIZON + 200);
+  // Sterne
+  const sa = (1 - day) * (1 - st * 0.8);
+  if (sa > 0.02) for (const s of stars) { ctx.fillStyle = `rgba(255,255,255,${sa * s.b})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.fill(); }
+  // Sonne (Bogen über den Himmel) & Mond (gegenüber)
+  const arc = (p) => { const a = p / 0.5 * Math.PI; return [540 - 600 * Math.cos(a), 1330 - 600 * Math.sin(a)]; };
+  if (ph < 0.5) {
+    const [x, y] = arc(ph);
+    const sg = ctx.createRadialGradient(x, y, 30, x, y, 420); sg.addColorStop(0, `rgba(255,220,140,${0.8 * (1 - st * 0.7)})`); sg.addColorStop(1, 'rgba(255,200,100,0)');
+    ctx.fillStyle = sg; ctx.fillRect(x - 420, y - 420, 840, 840);
+    ctx.fillStyle = `rgba(255,246,208,${1 - st * 0.6})`; ctx.beginPath(); ctx.arc(x, y, 80, 0, 7); ctx.fill();
+    // Bewegungsspur der Sonne (Zeitraffer)
+    for (let k = 1; k < 7; k++) { const [px, py] = arc(Math.max(0, ph - k * 0.012)); ctx.fillStyle = `rgba(255,240,190,${0.18 * (1 - k / 7) * (1 - st)})`; ctx.beginPath(); ctx.arc(px, py, 80, 0, 7); ctx.fill(); }
+  } else {
+    const [x, y] = arc(ph - 0.5);
+    ctx.fillStyle = `rgba(238,242,255,${1 - st * 0.7})`; ctx.beginPath(); ctx.arc(x, y, 50, 0, 7); ctx.fill();
+  }
+  // Sturmwolken
+  if (st > 0.01) for (const c of stormClouds) {
+    const x = ((c.x + t * c.sp * (0.5 + st)) % (W + 700)) - 350;
+    ctx.save(); ctx.globalAlpha = 0.85 * st; ctx.translate(x, c.y); ctx.scale(c.s, c.s);
+    ctx.fillStyle = rgb(mix(hex('#20242c'), hex('#5b6170'), day * 0.8));
+    ctx.beginPath(); ctx.ellipse(0, 0, 130, 40, 0, 0, 7); ctx.ellipse(-60, -22, 70, 40, 0, 0, 7); ctx.ellipse(50, -30, 80, 46, 0, 0, 7); ctx.fill(); ctx.restore();
+  }
+  // Berge
+  const lit = (dayC, nightC) => mix(mix(hex(nightC), hex(dayC), day), hex('#3a3f48'), st * 0.35);
+  ctx.fillStyle = rgb(lit('#7d8fb3', '#141b33')); ctx.beginPath(); ctx.moveTo(-60, HORIZON); for (const p of mountains) ctx.lineTo(...p); ctx.lineTo(W + 60, HORIZON); ctx.fill();
+  // Meer
+  ctx.fillStyle = rgb(lit('#1f7fd1', '#06102a')); ctx.beginPath(); ctx.moveTo(500, HORIZON); ctx.lineTo(W + 60, HORIZON); ctx.lineTo(W + 60, 1720); ctx.quadraticCurveTo(760, 1690, 560, 1560); ctx.quadraticCurveTo(520, 1450, 500, HORIZON); ctx.fill();
+  if (st > 0.2) { ctx.strokeStyle = `rgba(230,240,255,${0.5 * st})`; ctx.lineWidth = 4; for (let i = 0; i < 9; i++) { const yy = HORIZON + 30 + i * 32; ctx.beginPath(); for (let x = 540; x < W; x += 30) ctx.lineTo(x, yy + Math.sin(x * 0.05 + t * 9 + i) * 8 * st); ctx.stroke(); } }
+  // Hügel
+  ctx.fillStyle = rgb(lit('#5fae4a', '#0d2018'));
+  ctx.beginPath(); ctx.moveTo(-60, HORIZON + 20); ctx.quadraticCurveTo(250, 1360, 560, 1560); ctx.quadraticCurveTo(760, 1700, W + 60, 1700); ctx.lineTo(W + 60, H + 60); ctx.lineTo(-60, H + 60); ctx.fill();
+  ctx.fillStyle = rgb(mix(lit('#5fae4a', '#0d2018'), hex('#000000'), 0.18));
+  ctx.beginPath(); ctx.moveTo(-60, 1720); ctx.quadraticCurveTo(400, 1640, W + 60, 1760); ctx.lineTo(W + 60, H + 60); ctx.lineTo(-60, H + 60); ctx.fill();
+  // Häuser – Licht an/aus im Takt (Schlafchaos)
+  houses.forEach((h, i) => {
+    ctx.fillStyle = rgb(lit(h.c, '#151a28')); ctx.fillRect(h.x, h.y - h.h, h.w, h.h);
+    ctx.fillStyle = rgb(lit('#8a3b2a', '#0c0f18')); ctx.beginPath(); ctx.moveTo(h.x - 12, h.y - h.h); ctx.lineTo(h.x + h.w / 2, h.y - h.h - 60); ctx.lineTo(h.x + h.w + 12, h.y - h.h); ctx.fill();
+    const chaos = t > B[2] ? (Math.sin(t * (3 + i * 1.7) + i) > 0) : day < 0.4;
+    ctx.fillStyle = chaos ? 'rgba(255,205,110,1)' : rgb(lit('#b8dcf5', '#0a0d16'));
+    ctx.fillRect(h.x + 18, h.y - h.h + 22, 30, 28); ctx.fillRect(h.x + h.w - 48, h.y - h.h + 22, 30, 28);
+  });
+  // Bäume (biegen sich im Sturm)
+  for (const tr of trees) {
+    const s = tr.s * 170, bend = Math.sin(t * 1.4 + tr.x) * 0.02 + st * (0.18 + 0.08 * Math.sin(t * 7 + tr.x));
+    ctx.save(); ctx.translate(tr.x, tr.y); ctx.rotate(bend);
+    ctx.fillStyle = rgb(lit('#5b3b22', '#0b0b10')); ctx.fillRect(-s * 0.06, -s, s * 0.12, s);
+    for (const b of tr.blobs) { ctx.fillStyle = rgb(lit(rgbHex(mix(hex('#2d7d32'), hex('#78c043'), b.g)), '#0b1a14')); ctx.beginPath(); ctx.arc(b.dx * s * 0.45, -s * 1.05 + b.dy * s * 0.45, b.r * s * 0.55, 0, 7); ctx.fill(); }
+    ctx.restore();
+  }
+  for (const f of flowers) {
+    const bend = st * 18 * (1 + Math.sin(t * 8 + f.x));
+    ctx.strokeStyle = rgb(lit('#3c7a2f', '#0b1a12')); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.quadraticCurveTo(f.x + bend * 0.5, f.y - f.h * 0.6, f.x + bend, f.y - f.h); ctx.stroke();
+    ctx.fillStyle = rgb(lit(f.c, '#121624')); ctx.beginPath(); ctx.arc(f.x + bend, f.y - f.h, 9, 0, 7); ctx.fill();
+  }
+  // Regen
+  if (st > 0.05) {
+    ctx.strokeStyle = `rgba(200,215,240,${0.55 * st})`; ctx.lineWidth = 3;
+    for (const d of rain) { const y = (d.y + t * d.sp) % (H + 100) - 50, x = d.x - y * 0.35 * st; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - d.l * 0.35 * st, y + d.l); ctx.stroke(); }
+  }
+  // Blitze
+  for (const lt of lightning) {
+    const d = t - lt; if (d < 0 || d > 0.35) continue;
+    const a = d < 0.08 ? 1 : (d < 0.14 ? 0.3 : (d < 0.2 ? 0.9 : 1 - (d - 0.2) / 0.15));
+    ctx.fillStyle = `rgba(230,235,255,${0.55 * a})`; ctx.fillRect(0, 0, W, H);
+    const r2 = rng(Math.floor(lt * 100)); let x = 300 + r2() * 500, y = 150;
+    ctx.strokeStyle = `rgba(255,255,255,${a})`; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x, y);
+    while (y < HORIZON - 80) { x += (r2() - 0.5) * 120; y += 60 + r2() * 60; ctx.lineTo(x, y); } ctx.stroke();
+  }
+}
+function rgbHex(c) { return '#' + c.map(v => (v | 0).toString(16).padStart(2, '0')).join(''); }
+
+// Uhr-Widget links: zeigt, wie schnell ein 12-Stunden-Tag vergeht
+function drawClock(t) {
+  const a = inv(B[1] + 0.2, B[1] + 0.6, t) * (1 - inv(B[3] - 0.3, B[3], t)); if (a <= 0) return;
+  const x = 95, y = 1120, r = 62;
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.roundRect(x - 85, y - 85, 170, 250, 30); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 4;
+  for (let i = 0; i < 12; i++) { const an = i / 12 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(x + Math.sin(an) * r * 0.78, y - Math.cos(an) * r * 0.78); ctx.lineTo(x + Math.sin(an) * r * 0.92, y - Math.cos(an) * r * 0.92); ctx.stroke(); }
+  const an = ((t - B[1]) / DAY_P) * Math.PI * 2;  // eine Umdrehung = ein ganzer Tag
+  ctx.strokeStyle = '#ff2d4a'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.sin(an) * r * 0.75, y - Math.cos(an) * r * 0.75); ctx.stroke();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill();
+  strokeText('1 Tag', x, y + 102, 34, '#fff', 800, 8);
+  strokeText('= 12 h', x, y + 140, 34, '#ffd400', 900, 8);
+  ctx.restore();
+}
+
+// ============================================================
+//  TEXT
+// ============================================================
+function wrapWords(text, maxW, size) {
+  ctx.font = `800 ${size}px ${FONT}`;
+  const words = text.split(' ').map(s => ({ hi: s.includes('*'), txt: s.replace(/\*/g, '') }));
+  const lines = []; let line = [], lw = 0; const sp = ctx.measureText(' ').width;
+  for (const wd of words) { const ww = ctx.measureText(wd.txt).width; if (line.length && lw + sp + ww > maxW) { lines.push({ words: line, w: lw }); line = []; lw = 0; } wd.w = ww; lw += (line.length ? sp : 0) + ww; line.push(wd); }
+  if (line.length) lines.push({ words: line, w: lw });
+  return { lines, sp };
+}
+function markSpans(text) { let on = false; return text.split(' ').map(w => { if (w.startsWith('*')) on = true; const cur = on || w.includes('*'); if (w.replace(/^\*/, '').includes('*')) on = false; return (cur ? '*' : '') + w.replace(/\*/g, ''); }).join(' '); }
+function drawFact(text, lt, cy, out) {
+  if (lt < 0) return;
+  const size = 58, lh = 74; const { lines, sp } = wrapWords(markSpans(text), 860, size);
+  const boxW = Math.max(...lines.map(l => l.w)) + 90, boxH = lines.length * lh + 60;
+  const inK = backOut(clamp(lt / 0.45)), a = clamp(lt / 0.2) * (1 - out);
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, cy + (1 - inK) * 60 - out * 40); ctx.scale(0.85 + 0.15 * inK, 0.85 + 0.15 * inK);
+  ctx.fillStyle = 'rgba(8,10,20,0.76)'; ctx.beginPath(); ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, 34); ctx.fill();
+  ctx.fillStyle = '#3fd0ff'; ctx.beginPath(); ctx.roundRect(-boxW / 2, -boxH / 2, 12, boxH, [34, 0, 0, 34]); ctx.fill();
+  ctx.font = `800 ${size}px ${FONT}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  let wi = 0;
+  lines.forEach((ln, li) => {
+    let x = -ln.w / 2; const y = -boxH / 2 + 30 + lh * li + lh / 2;
+    for (const wd of ln.words) {
+      const wk = clamp((lt - 0.15 - wi * 0.1) / 0.18), pop = wd.hi ? backOut(wk) : 1;
+      ctx.save(); ctx.globalAlpha = a * (0.18 + 0.82 * wk); ctx.translate(x + wd.w / 2, y); ctx.scale(pop, pop);
+      if (wd.hi) { ctx.fillStyle = '#ffd400'; ctx.shadowColor = 'rgba(255,212,0,0.6)'; ctx.shadowBlur = 20 * wk; } else ctx.fillStyle = '#fff';
+      ctx.fillText(wd.txt, 0, 0); ctx.restore(); x += wd.w + sp; wi++;
+    }
+  });
+  ctx.restore();
+}
+function strokeText(txt, x, y, size, fill, weight = 900, stroke = 14, align = 'center') {
+  ctx.font = `${weight} ${size}px ${FONT}`; ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  ctx.lineWidth = stroke; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeText(txt, x, y); ctx.fillStyle = fill; ctx.fillText(txt, x, y);
+}
+function drawTimeline(t) {
+  const a = inv(B[1] - 0.2, B[1] + 0.3, t) * (1 - inv(B[5], B[5] + 0.4, t)); if (a <= 0) return;
+  const y = 230, x0 = 150, x1 = 930;
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.roundRect(x0 - 60, y - 50, x1 - x0 + 120, 120, 40); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  ctx.strokeStyle = '#3fd0ff'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(lerp(x0, x1, inv(B[1], B[5], t)), y); ctx.stroke();
+  SCENES.forEach((sc, i) => {
+    const nx = lerp(x0, x1, i / 3), reached = t >= S[sc.key][0], active = reached && t < S[sc.key][1];
+    ctx.fillStyle = reached ? '#3fd0ff' : '#3a3f55'; ctx.beginPath(); ctx.arc(nx, y, 16 * (active ? 1 + 0.12 * Math.sin(t * 8) : 1), 0, 7); ctx.fill();
+    ctx.font = `800 30px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = reached ? '#fff' : 'rgba(255,255,255,0.5)'; ctx.fillText(sc.node, nx, y + 44);
+  });
+  ctx.restore();
+}
+function drawSceneText(t, sc) {
+  const [t0, t1] = S[sc.key], lt = t - t0; if (lt < 0 || t > t1 + 0.05) return;
+  const inK = clamp(lt / 0.35), moveK = ease(inv(0.95, 1.35, lt)), outK = inv(t1 - t0 - 0.3, t1 - t0, lt);
+  const long = sc.big.length > 9;
+  const cy = lerp(880, 440, moveK), size = lerp(long ? 140 : 210, long ? 100 : 125, moveK), s0 = lerp(2.4, 1, easeOut(inK));
+  ctx.save(); ctx.globalAlpha = clamp(inK * 2) * (1 - outK); ctx.translate(W / 2, cy); ctx.scale(s0, s0);
+  if (sc.pre) strokeText(sc.pre, 0, -size * 0.74, size * 0.3, '#fff', 800, 10);
+  ctx.font = `900 ${size}px ${FONT}`; const gr = ctx.createLinearGradient(0, -size / 2, 0, size / 2); gr.addColorStop(0, '#e6fbff'); gr.addColorStop(1, '#3fc6ff');
+  strokeText(sc.big, 0, 0, size, gr, 900, 22); ctx.restore();
+  const ck = inv(1.2, 1.5, lt) * (1 - outK);
+  if (ck > 0) {
+    const label = sc.counter(lt, t);
+    ctx.save(); ctx.globalAlpha = ck; ctx.font = `800 40px ${FONT}`; const tw = ctx.measureText(label).width + 90;
+    ctx.fillStyle = 'rgba(255,40,60,0.95)'; ctx.beginPath(); ctx.roundRect(W / 2 - tw / 2, 525, tw, 64, 32); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(W / 2 - tw / 2 + 34, 557, 9 * (0.7 + 0.3 * Math.sin(t * 10)), 0, 7); ctx.fill();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(label, W / 2 - tw / 2 + 56, 559); ctx.restore();
+  }
+  const f0 = sc.facts[0], f1 = sc.facts[1], f0out = inv(f1.at - 0.3, f1.at, lt);
+  if (f0out < 1) drawFact(f0.text, lt - f0.at, 780, f0out);
+  drawFact(f1.text, lt - f1.at, 780, outK);
+}
+function drawHook(t) {
+  if (t > B[1] + 0.1) return;
+  const rows = [['WAS', 'WÄRE,', 'WENN'], ['SICH', 'DIE', 'ERDE'], ['DOPPELT', 'SO', 'SCHNELL'], ['DREHT?']];
+  const colors = { 'ERDE': '#3fd0ff', 'DOPPELT': '#ffd400', 'SCHNELL': '#ffd400', 'DREHT?': '#ff4d5e' };
+  const sizes = [104, 104, 112, 140], out = inv(B[1] - 0.3, B[1], t);
+  let wi = 0; ctx.save(); ctx.globalAlpha = 1 - out;
+  rows.forEach((r, ri) => {
+    ctx.font = `900 ${sizes[ri]}px ${FONT}`; let fsz = sizes[ri]; const w0 = ctx.measureText(r.join(' ')).width; if (w0 > 940) fsz = Math.floor(fsz * 940 / w0);
+    ctx.font = `900 ${fsz}px ${FONT}`; const sp = ctx.measureText(' ').width, widths = r.map(p => ctx.measureText(p).width);
+    let x = W / 2 - (widths.reduce((a, b) => a + b, 0) + sp * (r.length - 1)) / 2;
+    r.forEach((txt, pi) => {
+      const k = clamp((t - 0.08 - wi * 0.2) / 0.22);
+      if (k > 0) { ctx.save(); ctx.translate(x + widths[pi] / 2 + (txt === 'DREHT?' ? Math.sin(t * 60) * 4 * inv(2.2, 2.4, t) : 0), 400 + ri * 135); const s = backOut(k); ctx.scale(s, s); strokeText(txt, 0, 0, fsz, colors[txt] || '#fff', 900, 20); ctx.restore(); }
+      x += widths[pi] + sp; wi++;
+    });
+  });
+  // Geschwindigkeits-Anzeige
+  const ka = inv(0.3, 0.6, t);
+  if (ka > 0) {
+    const v = lerp(1670, 3340, ease(inv(SPEEDUP, SPEEDUP + 0.6, t)));
+    const label = 'Äquator: ' + fmt(Math.round(v / 10) * 10) + ' km/h';
+    ctx.globalAlpha = ka * (1 - out); ctx.font = `900 50px ${FONT}`; const tw = ctx.measureText(label).width + 70;
+    const hot = inv(SPEEDUP, SPEEDUP + 0.3, t);
+    ctx.fillStyle = rgb(mix(hex('#141a2e'), hex('#ff2d4a'), hot), 0.92); ctx.beginPath(); ctx.roundRect(W / 2 - tw / 2, 1700, tw, 84, 42); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, W / 2, 1743);
+  }
+  ctx.restore();
+}
+function drawOutro(t) {
+  const lt = t - B[5]; if (lt < 0) return;
+  const a = clamp(lt / 0.4);
+  ctx.save(); ctx.fillStyle = `rgba(1,2,8,${0.55 * a})`; ctx.fillRect(0, 0, W, H);
+  const items = [['UND JETZT DU:', 470, 74, '#3fd0ff'], ['12-Stunden-Tage:', 620, 96, '#fff'], ['GUT', 790, 170, '#3ddc84'], ['oder', 915, 70, '#fff'], ['SCHLECHT?', 1040, 150, '#ff4d5e']];
+  items.forEach(([txt, y, sz, col], i) => { const k = backOut(clamp((lt - 0.1 - i * 0.18) / 0.4)); if (k <= 0) return; ctx.save(); ctx.translate(W / 2, y); ctx.scale(k, k); strokeText(txt, 0, 0, sz, col, 900, 20); ctx.restore(); });
+  const k3 = clamp((lt - 1.3) / 0.4);
+  if (k3 > 0) {
+    ctx.globalAlpha = k3; const bob = Math.sin(lt * 6) * 10;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(W / 2 - 410, 1210 + bob, 820, 110, 55); ctx.fill();
+    ctx.fillStyle = '#111'; ctx.font = `900 50px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('Schreib’s in die Kommentare', W / 2, 1267 + bob);
+    ctx.fillStyle = '#3fd0ff'; ctx.beginPath(); ctx.moveTo(W / 2 - 40, 1350 + bob * 1.5); ctx.lineTo(W / 2 + 40, 1350 + bob * 1.5); ctx.lineTo(W / 2, 1405 + bob * 1.5); ctx.closePath(); ctx.fill();
+  }
+  const k4 = clamp((lt - 2.1) / 0.4); if (k4 > 0) { ctx.globalAlpha = k4; strokeText('Folge für Teil 3', W / 2, 1480, 60, '#fff', 800, 12); }
+  ctx.restore();
+}
+
+// ---------- fx ----------
+const CUTS = [B[1], B[2], B[3], B[4], B[5]];
+function flash(t) { let m = 0; for (const c of CUTS) { const d = t - c; if (d >= -0.06 && d < 0.4) m = Math.max(m, d < 0 ? 1 + d / 0.06 : 1 - d / 0.4); } return clamp(m); }
+function shake(t) { let m = 0; for (const c of [...CUTS, SPEEDUP]) { const d = t - c; if (d >= 0 && d < 0.5) m = Math.max(m, 1 - d / 0.5); } return Math.max(m, storm(t) * 0.25 * (t < B[3] ? 1 : 0)); }
+function zoomAt(t) { let base = 1; for (const k in S) { const [a, b] = S[k]; if (t >= a && t < b) base = 1 + 0.06 * ease(inv(a, b, t)); } let p = 0; for (const c of [...CUTS, SPEEDUP]) { const d = t - c; if (d >= 0 && d < 0.6) p = Math.max(p, 0.08 * (1 - easeOut(d / 0.6))); } return base + p; }
+
+// ---------- main ----------
+function renderFrame(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  const z = zoomAt(t), sh = shake(t) * 14;
+  ctx.translate(W / 2 + Math.sin(t * 73) * sh, H * 0.62 + Math.cos(t * 61) * sh); ctx.scale(z, z); ctx.translate(-W / 2, -H * 0.62);
+  if (t < B[1]) {
+    drawSpace(t);
+    const g = { cx: W / 2, cy: 1330, R: 300, fx: 1, fy: 1, rot: spin(t), dry: 90, flood: 0, volc: 0, eq: inv(0.3, 0.6, t) };
+    drawGlobe(t, g); drawSpeedStreaks(t, g, inv(SPEEDUP, SPEEDUP + 0.4, t));
+  } else if (t < B[3]) {
+    drawLandscape(t);
+  } else {
+    drawSpace(t);
+    const m = ease(inv(MIGRATE[0], MIGRATE[1], t)), ring = ease(inv(B[4] + 0.6, RING + 0.8, t)), flat = ease(inv(B[4] + 0.8, B[4] + 3.5, t));
+    const g = { cx: W / 2, cy: 1240, R: 360, fx: 1 + 0.05 * flat, fy: 1 - 0.12 * flat, rot: spin(t), dry: lerp(lerp(90, 42, m), 32, ring), flood: lerp(lerp(0, 22, m), 30, ring), volc: inv(B[4] + 1.6, B[4] + 2.6, t), eq: 1 };
+    drawGlobe(t, g); drawSpeedStreaks(t, g, 0.6);
+    if (flat > 0.05 && t < B[5]) { ctx.save(); ctx.globalAlpha = flat * 0.9; strokeText('(Abplattung übertrieben dargestellt)', W / 2, 1720, 32, '#cfd8e8', 700, 8); ctx.restore(); }
+  }
+  ctx.restore();
+  const tg = ctx.createLinearGradient(0, 0, 0, 1100); tg.addColorStop(0, 'rgba(0,0,0,0.5)'); tg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = tg; ctx.fillRect(0, 0, W, 1100);
+  const vg = ctx.createRadialGradient(W / 2, H / 2, 500, W / 2, H / 2, 1250); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  drawHook(t); drawTimeline(t); drawClock(t);
+  for (const sc of SCENES) drawSceneText(t, sc);
+  drawOutro(t);
+  const fl = flash(t); if (fl > 0) { ctx.fillStyle = `rgba(255,255,255,${fl * 0.9})`; ctx.fillRect(0, 0, W, H); }
+  ctx.fillStyle = 'rgba(255,255,255,0.025)'; for (let y = (t * 300) % 6; y < H; y += 6) ctx.fillRect(0, y, W, 1);
+}
+window.renderFrame = renderFrame;
+if (!location.hash.includes('render')) { const st = performance.now(); (function loop() { renderFrame(((performance.now() - st) / 1000) % window.DURATION); requestAnimationFrame(loop); })(); }
+document.fonts.load(`900 100px Inter`).then(() => { window.READY = true; });
+</script>
+</body>
+</html>
