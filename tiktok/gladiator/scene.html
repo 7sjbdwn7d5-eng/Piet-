@@ -17,28 +17,30 @@ const ctx = document.getElementById('c').getContext('2d');
 const FONT = '"Inter", "Inter Display", sans-serif';
 
 // Szenen-Schnitte (Video-Zeit), getimt auf den Sprechertext (lines.json)
-const B = [0, 4.1, 9.9, 18.1, 24.4, 34.3, 39.4];
+const B = [0, 4.05, 9.0, 16.5, 23.4, 34.45, 39.8];
 const S = { hook: [B[0], B[1]], s6: [B[1], B[2]], s12: [B[2], B[3]], s15: [B[3], B[4]], judge: [B[4], B[5]], outro: [B[5], B[6]] };
 // Einstellungen innerhalb der Szenen
 const GATE = 2.3;                 // Hook: Kamera fährt aufs Tor
-const TRAIN = 7.15;               // "Training mit dem Holzschwert"
-const GERSTEN = 14.25;            // "Gerstenfresser"
-const ASH = 15.1;                 // "Dazu ein Trank aus Asche"
-const ARENA = 19.05, FOE = 21.95; // "Die Arena" / "Dein Gegner"
-const THUMB = 25.8, ALIVE = 27.75, COINS = 30.3, STAR = 32.1;
-const WIPES = [TRAIN, ASH, ARENA, FOE, THUMB, ALIVE, COINS, STAR];
+const TRAIN = 6.4;                // "Training mit dem Holzschwert"
+const GERSTEN = 12.85;            // "Gerstenfresser"
+const ASH = 13.7;                 // "Dazu ein Trank aus Asche"
+const GATEOPEN = 17.6;            // "Das Tor öffnet sich"
+const ARENA = 19.0, FOE = 21.1;   // "Fünfzigtausend Menschen schreien" / "Dein Gegner"
+const FALL = 24.9;                // "... und du liegst im Sand" (Zeitlupe)
+const THUMB = 25.5, ALIVE = 27.3, COINS = 29.8, STAR = 31.25;
+const WIPES = [TRAIN, ASH, ARENA, THUMB, COINS, STAR];
 window.DURATION = B[6];
 
 const SCENES = [
   { key: 's6', pre: '', big: '06:00 UHR', node: '06:00', place: 'GLADIATORENSCHULE',
     facts: [{ at: 0.8, text: 'Aufstehen in der *Gladiatorenschule*.' }, { at: TRAIN - B[1] + 0.1, text: 'Training mit dem *Holzschwert* – stundenlang.' }] },
   { key: 's12', pre: '', big: '12:00 UHR', node: '12:00', place: 'ESSEN',
-    facts: [{ at: 1.1, text: '*Gerstenbrei* und Bohnen.' }, { at: ASH - B[2] + 0.1, text: 'Dazu ein Trank aus *Asche* – für starke Knochen.' }] },
+    facts: [{ at: 1.0, text: '*Gerstenbrei* und Bohnen.' }, { at: ASH - B[2] + 0.1, text: 'Dazu ein Trank aus *Asche* – für starke Knochen.' }] },
   { key: 's15', pre: '', big: '15:00 UHR', node: '15:00', place: 'KOLOSSEUM, ROM',
-    facts: [{ at: 1.95, text: '*50.000* Zuschauer.' }, { at: FOE - B[3] + 0.1, text: 'Dein Gegner: *Netz und Dreizack.*' }] },
+    facts: [{ at: GATEOPEN - B[3], text: 'Das *Tor* öffnet sich.' }, { at: ARENA - B[3] + 0.1, text: '*50.000* Menschen schreien.' }, { at: FOE - B[3] + 0.1, text: 'Dein Gegner: *Netz und Dreizack.*' }] },
   { key: 'judge', pre: '16:00 UHR', big: 'DAS URTEIL', node: 'Urteil', place: 'ARENA',
-    facts: [{ at: THUMB - B[4] + 0.1, text: 'Jetzt entscheidet das *Publikum*.' }, { at: ALIVE - B[4] + 0.05, text: 'Doch die meisten Kämpfe endeten *nicht tödlich*.' },
-            { at: COINS - B[4] + 0.1, text: 'Gladiatoren waren *teuer*.' }, { at: STAR - B[4] + 0.1, text: 'Die Besten: gefeiert wie *Stars*.' }] },
+    facts: [{ at: 1.2, text: 'Ein Fehler – und du liegst im *Sand*.' }, { at: THUMB - B[4] + 0.1, text: 'Jetzt entscheidet das *Publikum*.' }, { at: ALIVE - B[4] + 0.05, text: 'Doch die meisten Kämpfe endeten *nicht tödlich*.' },
+            { at: COINS - B[4] + 0.1, text: 'Gladiatoren waren *teuer*.' }, { at: STAR - B[4] + 0.1, text: 'Wer mutig kämpfte: gefeiert wie ein *Star*.' }] },
 ];
 
 // ---------- helpers ----------
@@ -254,8 +256,9 @@ function tunnelShot(t) {
     ctx.beginPath(); ctx.moveTo(cx - w / 2, cy + h / 2); ctx.lineTo(cx - w / 2, cy - h * 0.1); ctx.arc(cx, cy - h * 0.1, w / 2, Math.PI, 0); ctx.lineTo(cx + w / 2, cy + h / 2); ctx.closePath();
     ctx.moveTo(cx - w * 0.42, cy + h / 2); ctx.lineTo(cx + w * 0.42, cy + h / 2); ctx.lineTo(cx + w * 0.42, cy - h * 0.06); ctx.arc(cx, cy - h * 0.06, w * 0.42, 0, Math.PI, true); ctx.closePath(); ctx.fill('evenodd');
   }
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-  const gate = 1 - ease(clamp(lt / 0.8)); ctx.fillStyle = '#1a120c'; for (let i = 0; i < 7; i++) ctx.fillRect(cx - 160 + i * 52, cy - 200 - (1 - gate) * 300, 16, 400 * gate + 10);
+  ctx.globalAlpha = 0.35 + 0.65 * ease(inv(GATEOPEN - 0.1, GATEOPEN + 1.0, t)); ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+  const gate = 1 - ease(inv(GATEOPEN - 0.05, GATEOPEN + 0.8, t)); const burst = ease(inv(GATEOPEN, GATEOPEN + 1.2, t)); ctx.fillStyle = '#1a120c'; for (let i = 0; i < 7; i++) ctx.fillRect(cx - 160 + i * 52, cy - 200 - (1 - gate) * 300, 16, 400 * gate + 10);
+  if (burst > 0) { ctx.fillStyle = `rgba(255,245,220,${0.5 * burst})`; ctx.fillRect(0, 0, W, H); }
 }
 // --- Arena von innen ---
 const crowd = Array.from({ length: 900 }, () => ({ x: rr(-60, W + 60), row: Math.floor(rr(0, 9)), c: ['#d9302c', '#ffffff', '#3a6fd9', '#ffc233', '#2e9e5a', '#e8a070'][Math.floor(R() * 6)], ph: rr(0, 6) }));
@@ -285,8 +288,9 @@ function foeShot(t) {
   ctx.save(); ctx.translate(540, 1250);
   for (let i = 0; i < 40; i++) { ctx.rotate(Math.PI / 20); ctx.fillStyle = i % 2 ? 'rgba(255,120,60,0.18)' : 'rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-60, 1600); ctx.lineTo(60, 1600); ctx.fill(); }
   ctx.restore();
-  const s = lerp(1.6, 1.9, ease(clamp(lt / 2.4)));
-  gladiator(560, 1820, s, { type: 'retiarius', arm: -0.9 + Math.sin(t * 3) * 0.15, net: Math.sin(t * 4) * 0.5, face: -1 });
+  const thrust = lt > 1.0 && lt < 1.6 ? Math.sin((lt - 1.0) / 0.6 * Math.PI) : 0;
+  const s = lerp(1.6, 1.9, ease(clamp(lt / 2.4))) + thrust * 0.5;
+  gladiator(560, 1820 + thrust * 200, s, { type: 'retiarius', arm: -0.9 + Math.sin(t * 3) * 0.15 - thrust * 0.6, net: Math.sin(t * 4) * 0.5, face: -1 });
   const k = backOut(clamp((lt - 0.4) / 0.35));
   if (k > 0) { ctx.save(); ctx.translate(540, 1080); ctx.scale(k, k); tagC('RETIARIUS', GOLD, '#3a1a00'); ctx.restore(); }
 }
@@ -295,20 +299,36 @@ function tagC(txt, bg, fg) { ctx.font = `900 64px ${FONT}`; const w = ctx.measur
 function fightShot(t) {
   const lt = t - B[4];
   arenaBg(t, 1.25, Math.sin(lt * 7) * 20);
-  const clash = (lt * 3) % 1;
-  const off = Math.sin(lt * 3 * Math.PI * 2) * 40;
+  const clash = (lt * 4) % 1;
+  const off = Math.sin(lt * 4 * Math.PI * 2) * 45;
   gladiator(330 + off, 1840, 1.55, { type: 'murmillo', arm: clash < 0.5 ? -1.6 + clash * 3 : -0.1, walk: lt * 8 });
   gladiator(770 - off, 1840, 1.55, { type: 'retiarius', arm: clash < 0.5 ? -0.2 : -1.2, face: -1, net: Math.sin(lt * 10) * 0.6, walk: lt * 8 + 1 });
   if (clash > 0.45 && clash < 0.62) { const k = (clash - 0.45) / 0.17; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; ctx.strokeStyle = `rgba(255,230,120,${1 - k})`; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(550 + Math.cos(a) * 20, 1500 + Math.sin(a) * 20); ctx.lineTo(550 + Math.cos(a) * (40 + 120 * k), 1500 + Math.sin(a) * (40 + 120 * k)); ctx.stroke(); } }
   for (let i = 0; i < 18; i++) { const k = (lt * 0.8 + i / 18) % 1; ctx.fillStyle = `rgba(220,190,140,${0.5 * (1 - k)})`; ctx.beginPath(); ctx.arc(300 + i * 30, 1720 - k * 120, 20 + k * 40, 0, 7); ctx.fill(); }
-  const vk = inv(B[4] + 1.0, B[4] + 1.3, t); if (vk > 0) { ctx.save(); ctx.globalAlpha = vk; strokeText('VORBEI!', 540, 1180, 120, '#fff', 900, 18); ctx.restore(); }
+}
+// --- Sturz in Zeitlupe ---
+function fallShot(t) {
+  const lt = t - FALL, k = ease(clamp(lt / 0.55));
+  ctx.save(); ctx.filter = 'grayscale(0.85) contrast(1.15)';
+  arenaBg(t, 1.3 + 0.1 * k, 0);
+  // Retiarius steht über dir
+  gladiator(860, 1840, 1.55, { type: 'retiarius', arm: lerp(-0.6, 0.9, k), face: -1, net: 0.2 });
+  // du fällst nach hinten
+  ctx.save(); ctx.translate(lerp(330, 560, k), 1840); ctx.rotate(-1.45 * k); gladiator(0, 0, 1.55, { type: 'murmillo', arm: lerp(-1.4, 1.2, k) }); ctx.restore();
+  // Schwert fliegt davon
+  ctx.save(); ctx.translate(lerp(450, 140, k), lerp(1420, 1180, k) + 600 * k * k); ctx.rotate(lt * 9); ctx.fillStyle = METAL; ctx.fillRect(-60, -7, 120, 14); ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-80, -12, 22, 24); ctx.restore();
+  for (let i = 0; i < 26; i++) { const d = clamp((lt - 0.35) / 0.5); if (d <= 0) break; ctx.fillStyle = `rgba(200,180,150,${0.6 * (1 - d)})`; ctx.beginPath(); ctx.arc(200 + i * 18, 1820 - Math.sin(i) * 60 * d, 18 + 40 * d, 0, 7); ctx.fill(); }
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha = inv(FALL + 0.1, FALL + 0.3, t); strokeText('ZEITLUPE', 900, 1480, 34, 'rgba(255,255,255,0.8)', 800, 6); ctx.restore();
 }
 // --- Daumen ---
 function thumbShot(t) {
   const lt = t - THUMB;
   arenaBg(t, 1.0, 0); ctx.fillStyle = 'rgba(20,10,5,0.55)'; ctx.fillRect(0, 0, W, H);
-  const ang = Math.sin(lt * 2.2) * 1.4;   // Daumen pendelt: hoch? runter?
-  ctx.save(); ctx.translate(540, 1320); ctx.scale(1.2, 1.2);
+  const slow = 1 - inv(ALIVE - 1.0, ALIVE - 0.1, t);
+  const ang = Math.sin(lt * 2.4) * 1.4 * slow;   // Daumen pendelt: hoch? runter? ... bleibt stehen
+  const hb = 1 + 0.04 * Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 * 1.4)), 8);
+  ctx.save(); ctx.translate(540, 1320); ctx.scale(1.2 * hb, 1.2 * hb);
   ctx.fillStyle = '#d9a07a'; ctx.beginPath(); ctx.roundRect(-110, -60, 220, 200, 50); ctx.fill();          // Faust
   ctx.strokeStyle = '#a8693f'; ctx.lineWidth = 6; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-90, -10 + i * 45); ctx.lineTo(60, -10 + i * 45); ctx.stroke(); }
   ctx.save(); ctx.translate(-20, -60); ctx.rotate(ang); ctx.fillStyle = '#d9a07a'; ctx.beginPath(); ctx.roundRect(-30, -150, 60, 160, 30); ctx.fill(); ctx.fillStyle = '#f0c8a8'; ctx.beginPath(); ctx.ellipse(0, -128, 20, 16, 0, 0, 7); ctx.fill(); ctx.restore();
@@ -320,7 +340,7 @@ function thumbShot(t) {
 function aliveShot(t) {
   const lt = t - ALIVE;
   arenaBg(t, 1.15, 0);
-  gladiator(250, 1820, 1.3, { type: 'murmillo', arm: 0.6, walk: 0 });
+  ctx.save(); ctx.translate(lerp(560, 260, ease(clamp(lt / 0.8))), 1820); ctx.rotate(-1.45 * (1 - ease(clamp(lt / 0.8)))); gladiator(0, 0, 1.3, { type: 'murmillo', arm: 0.6, walk: 0 }); ctx.restore();
   gladiator(830, 1820, 1.3, { type: 'retiarius', arm: 0.7, face: -1, net: 0 });
   gladiator(540, 1850, 1.4, { type: 'referee', arm: lerp(-1.2, -0.2, ease(clamp(lt / 0.5))) });
   const k = backOut(clamp((lt - 0.5) / 0.4));
@@ -377,7 +397,8 @@ function drawShot(t) {
   if (t < ARENA) return tunnelShot(t);
   if (t < FOE) return arenaShot(t);
   if (t < B[4]) return foeShot(t);
-  if (t < THUMB) return fightShot(t);
+  if (t < FALL) return fightShot(t);
+  if (t < THUMB) return fallShot(t);
   if (t < ALIVE) return thumbShot(t);
   if (t < COINS) return aliveShot(t);
   if (t < STAR) return coinShot(t);
@@ -464,7 +485,7 @@ function drawHook(t) {
   if (t > B[1] + 0.1) return;
   const out = inv(B[1] - 0.35, B[1], t);
   ctx.save(); ctx.globalAlpha = 1 - out;
-  const k1 = backOut(clamp((t - 0.1) / 0.35)), k2 = backOut(clamp((t - 0.45) / 0.35)), k3 = backOut(clamp((t - 0.8) / 0.4));
+  const k1 = backOut(clamp((t - 0.05) / 0.25)), k2 = backOut(clamp((t - 0.25) / 0.25)), k3 = backOut(clamp((t - 0.9) / 0.4));
   if (k1 > 0) { ctx.save(); ctx.translate(540, 380); ctx.scale(k1, k1); strokeText('EIN TAG ALS', 0, 0, 100, '#fff', 900, 18); ctx.restore(); }
   if (k2 > 0) { ctx.save(); ctx.translate(540, 520); ctx.scale(k2, k2); ctx.font = `900 150px ${FONT}`; const gr = ctx.createLinearGradient(0, -80, 0, 80); gr.addColorStop(0, '#fff3c4'); gr.addColorStop(1, '#ffb000'); strokeText('GLADIATOR', 0, 0, 148, gr, 900, 24); ctx.restore(); }
   if (k3 > 0) { ctx.save(); ctx.translate(540, 650); ctx.scale(k3, k3); strokeText('im alten Rom', 0, 0, 70, '#fff', 800, 14); ctx.restore(); }
@@ -475,8 +496,10 @@ function drawHook(t) {
 function drawOutro(t) {
   const lt = t - B[5]; if (lt < 0) return;
   ctx.save();
-  const items = [['UND JETZT DU:', 470, 74, GOLD], ['SCHWERT', 640, 170, '#e8eef5'], ['oder', 775, 70, '#fff'], ['DREIZACK?', 900, 150, '#3fd0ff']];
-  items.forEach(([txt, y, sz, col], i) => { const k = backOut(clamp((lt - 0.1 - i * 0.22) / 0.4)); if (k <= 0) return; ctx.save(); ctx.translate(W / 2, y); ctx.scale(k, k); strokeText(txt, 0, 0, sz, col, 900, 20); ctx.restore(); });
+  const items = [['UND IHR?', 450, 80, GOLD], ['Würdet ihr', 590, 100, '#fff'], ['EINEN TAG', 735, 150, GOLD], ['ÜBERLEBEN?', 890, 150, '#ff3b3b']];
+  items.forEach(([txt, y, sz, col], i) => { const k = backOut(clamp((lt - 0.1 - i * 0.25) / 0.4)); if (k <= 0) return; ctx.save(); ctx.translate(W / 2 + (i === 3 ? Math.sin(t * 50) * 3 * inv(1.0, 1.2, lt) : 0), y); ctx.scale(k, k); strokeText(txt, 0, 0, sz, col, 900, 22); ctx.restore(); });
+  // Schwerthieb über die Frage
+  const sl = clamp((lt - 1.05) / 0.2); if (sl > 0 && sl < 1) { ctx.strokeStyle = `rgba(255,255,255,${1 - sl * 0.5})`; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(-50, 1000); ctx.lineTo(lerp(-50, 1130, sl), lerp(1000, 760, sl)); ctx.stroke(); }
   const k3 = clamp((lt - 1.3) / 0.4);
   if (k3 > 0) {
     ctx.globalAlpha = k3; const bob = Math.sin(lt * 6) * 10;
@@ -491,8 +514,8 @@ function drawOutro(t) {
 const CUTS = [B[1], B[2], B[3], B[4], B[5]];
 function flash(t) { let m = 0; for (const c of CUTS) { const d = t - c; if (d >= -0.06 && d < 0.4) m = Math.max(m, d < 0 ? 1 + d / 0.06 : 1 - d / 0.4); } return clamp(m); }
 function shake(t) {
-  let m = 0; for (const c of [...CUTS, GERSTEN, FOE]) { const d = t - c; if (d >= 0 && d < 0.5) m = Math.max(m, 1 - d / 0.5); }
-  if (t > B[4] && t < THUMB) m = Math.max(m, 0.55);
+  let m = 0; for (const c of [...CUTS, GERSTEN, FOE + 1.1, 0.05, 0.25, 0.5, FALL + 0.5, ALIVE]) { const d = t - c; if (d >= 0 && d < 0.5) m = Math.max(m, 1 - d / 0.5); }
+  if (t > B[4] && t < FALL) m = Math.max(m, 0.6);
   if (t > TRAIN && t < B[2]) { const sw = ((t - TRAIN) * 2.6) % 1; if (sw > 0.5 && sw < 0.65) m = Math.max(m, 0.4); }
   return m;
 }
@@ -516,6 +539,22 @@ function renderFrame(t) {
   ctx.restore();
   const tg = ctx.createLinearGradient(0, 0, 0, 1000); tg.addColorStop(0, 'rgba(0,0,0,0.5)'); tg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = tg; ctx.fillRect(0, 0, W, 1000);
   const vg = ctx.createRadialGradient(W / 2, H / 2, 500, W / 2, H / 2, 1250); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.5)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  // Spannung
+  const tense = Math.max(inv(B[3], B[3] + 0.3, t) * (1 - inv(ARENA - 0.1, ARENA, t)), inv(FOE, FOE + 0.3, t) * (1 - inv(B[4] - 0.1, B[4], t)), inv(FALL, FALL + 0.2, t) * (1 - inv(ALIVE - 0.05, ALIVE + 0.2, t)));
+  if (tense > 0) {
+    const beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 * 1.4)), 6);
+    const rv = ctx.createRadialGradient(W / 2, H / 2, 380, W / 2, H / 2, 1150); rv.addColorStop(0, 'rgba(160,0,0,0)'); rv.addColorStop(1, `rgba(170,0,0,${tense * (0.35 + 0.35 * beat)})`); ctx.fillStyle = rv; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, 150 * tense); ctx.fillRect(0, H - 170 * tense, W, 170 * tense);
+  }
+  // Hook: schwarzer Start, Schwerthieb schneidet das Bild auf
+  if (t < 1.1) {
+    const op = ease(inv(0.62, 1.0, t));
+    ctx.fillStyle = '#000';
+    ctx.save(); ctx.translate(-op * 500, -op * 700); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(W, 0); ctx.lineTo(W, 760); ctx.lineTo(0, 1260); ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(op * 500, op * 700); ctx.beginPath(); ctx.moveTo(0, 1260); ctx.lineTo(W, 760); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill(); ctx.restore();
+    const sl = clamp((t - 0.45) / 0.17);
+    if (sl > 0 && t < 0.85) { ctx.strokeStyle = `rgba(255,250,230,${1 - inv(0.62, 0.85, t)})`; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(0, 1260); ctx.lineTo(W * sl, 1260 - 500 * sl); ctx.stroke(); }
+  }
   drawHook(t); drawTimeline(t);
   for (const sc of SCENES) drawSceneText(t, sc);
   drawOutro(t);

@@ -17,12 +17,15 @@ Gerstenfresser/hordearii (Plinius), Asche-Trank & vegetarische Kost (Knochenanal
 ## Sprechertext für ElevenLabs (Brian, eleven v4)
 ```
 Ein Tag als Gladiator im alten Rom. Würdest du ihn überleben?
-Sechs Uhr. Aufstehen in der Gladiatorenschule. Training mit dem Holzschwert, stundenlang.
-Zwölf Uhr. Gerstenbrei und Bohnen. Man nannte Gladiatoren: Gerstenfresser. Dazu ein Trank aus Asche, für starke Knochen.
-Fünfzehn Uhr. Die Arena. Fünfzigtausend Zuschauer. Dein Gegner: Netz und Dreizack.
-Der Kampf ist vorbei. Jetzt entscheidet das Publikum. Doch die meisten Kämpfe endeten nicht tödlich. Gladiatoren waren teuer. Die Besten wurden gefeiert wie Stars.
-Und du? Schwert oder Dreizack? Schreib es in die Kommentare!
+Sechs Uhr. Gladiatorenschule. Training mit dem Holzschwert, stundenlang.
+Zwölf Uhr. Gerstenbrei und Bohnen. Man nannte sie: Gerstenfresser. Dazu ein Trank aus Asche, für starke Knochen.
+Fünfzehn Uhr. Das Tor öffnet sich. Fünfzigtausend Menschen schreien. Dein Gegner: Netz und Dreizack.
+Ein Fehler, und du liegst im Sand. Jetzt entscheidet das Publikum. Doch die meisten Kämpfe endeten nicht tödlich, Gladiatoren waren teuer. Wer mutig kämpfte, wurde gefeiert wie ein Star.
+Und ihr? Würdet ihr einen Tag überleben? Schreibt es in die Kommentare!
 ```
+
+## Spannungs-Elemente
+Schwarzer Start + Schwerthieb, Kriegstrommeln, Kino-Balken + roter Herzschlag-Rand (Tunnel, Gegner, Sturz, Daumen), Dreizack-Stoß auf die Kamera, Sturz in grauer Zeitlupe, Musik setzt aus bis „ÜBERLEBT".
 
 ## Caption-Vorschlag
 Gladiatoren aßen fast nur Gerste 😳⚔️ #gladiator #altesrom #geschichte #history #wissen #fakten #lernenmittiktok #fyp
