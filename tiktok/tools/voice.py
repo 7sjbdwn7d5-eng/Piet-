@@ -10,6 +10,8 @@ ap.add_argument("model"); ap.add_argument("out"); ap.add_argument("lines", nargs
 ap.add_argument("--speaker", type=int, default=None)
 ap.add_argument("--pitch", type=float, default=0.97, help="<1 = etwas tiefer")
 ap.add_argument("--speed", type=float, default=1.0, help="Piper length-scale (>1 = langsamer)")
+ap.add_argument("--style", choices=["doku", "tiktok"], default="doku",
+                help="doku = ruhig, warm, dunkel; tiktok = schnell, hell, lebendig, kaum Pausen")
 a = ap.parse_args()
 
 LINES = [
@@ -27,19 +29,22 @@ tmp = tempfile.mkdtemp()
 inputs, filters = [], []
 for i, (start, text) in enumerate(LINES):
     f = os.path.join(tmp, f"l{i}.wav")
-    cmd = [sys.executable, "-m", "piper", "-m", a.model, "--length-scale", str(a.speed), "--noise-scale", "0.6",
-           "--noise-w", "0.7", "--sentence-silence", "0.22", "-f", f]
+    tik = a.style == "tiktok"
+    cmd = [sys.executable, "-m", "piper", "-m", a.model, "--length-scale", str(a.speed * (0.86 if tik else 1.0)),
+           "--noise-scale", "0.8" if tik else "0.6", "--noise-w", "0.9" if tik else "0.7",
+           "--sentence-silence", "0.07" if tik else "0.22", "-f", f]
     if a.speaker is not None: cmd += ["-s", str(a.speaker)]
     subprocess.run(cmd, input=text.encode(), check=True, stderr=subprocess.DEVNULL)
     inputs += ["-i", f]
     ms = int(start * 1000)
-    p = a.pitch
+    p = 1.0 if (a.style == "tiktok" and a.pitch == 0.97) else a.pitch
     filters.append(f"[{i}:a]aresample=48000,asetrate=48000*{p},aresample=48000,atempo={1 / p:.5f},adelay={ms}|{ms}[v{i}]")
 mix = "".join(f"[v{i}]" for i in range(len(LINES)))
 # warmer, weicher Klang: Tiefen leicht anheben, Härte/Zischlaute dämpfen, sanfte Kompression, kleiner Raum
+EQ = ("equalizer=f=160:t=q:w=1:g=2.5,equalizer=f=3200:t=q:w=1.5:g=-1.5,deesser=i=0.4," if a.style == "doku" else
+      "equalizer=f=200:t=q:w=1:g=-1.5,equalizer=f=3500:t=q:w=1.2:g=3.5,equalizer=f=9000:t=h:w=1:g=2,deesser=i=0.3,")
 filters.append(
-    f"{mix}amix=inputs={len(LINES)}:normalize=0,highpass=f=75,"
-    "equalizer=f=160:t=q:w=1:g=2.5,equalizer=f=3200:t=q:w=1.5:g=-1.5,deesser=i=0.4,"
+    f"{mix}amix=inputs={len(LINES)}:normalize=0,highpass=f=90," + EQ +
     "acompressor=threshold=-22dB:ratio=2.5:attack=10:release=200:makeup=2,"
     "aecho=0.85:0.5:22|37:0.12|0.08,loudnorm=I=-15:TP=-1.5,pan=stereo|c0=c0|c1=c0[out]")
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filters), "-map", "[out]", "-ar", "44100", a.out], check=True)
