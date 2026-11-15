@@ -30,7 +30,7 @@ const fs = require('fs');
   const ff = spawn('ffmpeg', ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out], { stdio: ['pipe', 'ignore', 'inherit'] });
   for (let i = 0; i < total; i++) {
-    const b64 = await page.evaluate(t => { window.renderFrame(t); return document.getElementById('c').toDataURL('image/jpeg', 0.95).split(',')[1]; }, i / fps);
+    const b64 = await page.evaluate(t => { window.renderFrame(window.mapTime ? window.mapTime(t) : t); return document.getElementById('c').toDataURL('image/jpeg', 0.95).split(',')[1]; }, i / fps);
     const buf = Buffer.from(b64, 'base64');
     if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
     if (i % 150 === 0) console.log(`frame ${i}/${total}`);

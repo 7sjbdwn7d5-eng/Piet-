@@ -1,11 +1,14 @@
 # Synthesizes the soundtrack (no samples needed): drone pad, clock ticks, whooshes and impacts.
 import numpy as np, wave, sys
-SR = 44100; DUR = 44.0
+SR = 44100
+# Schnittzeiten im Video (muss zu VIDEO_BOUNDS in scene.html passen)
+B = [0, 3.0, 10.0, 17.0, 23.6, 31.6, 36.5]
+DUR = B[-1]
 n = int(SR * DUR); t = np.arange(n) / SR
 out = np.zeros((n, 2))
 rng = np.random.default_rng(7)
-CUTS = [3.6, 12.2, 20.8, 29.8, 39.2]
-SCENES = [(0, 3.6), (3.6, 12.2), (12.2, 20.8), (20.8, 29.8), (29.8, 39.2), (39.2, 44)]
+CUTS = B[1:-1]
+SCENES = list(zip(B[:-1], B[1:]))
 note = lambda m: 440 * 2 ** ((m - 69) / 12)
 CHORDS = [[45, 52, 57, 60], [45, 52, 57, 60, 64], [38, 45, 50, 53, 56], [41, 48, 53, 57, 60], [45, 52, 57, 60, 64, 67], [48, 55, 60, 64, 67]]
 
@@ -34,13 +37,13 @@ for (a, b), ch in zip(SCENES, CHORDS):
     out[:, 0] += sig * 0.16; out[:, 1] += np.roll(sig, 300) * 0.16
 # sub bass pulse (heartbeat-ish) during scenes
 beat = 0.5
-for k in np.arange(3.6, 39.2, beat):
+for k in np.arange(B[1], B[5], beat):
     i0 = int(k * SR); L = int(0.35 * SR); tt = np.arange(L) / SR
     f = 55 * np.exp(-tt * 6) + 38
     s = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt * 9) * 0.32
     out[i0:i0 + L] += s[:, None]
 # clock ticks (alternating tick/tock), faster in the 100-year scene
-ticks = list(np.arange(3.6, 29.8, 0.5)) + list(np.arange(29.8, 39.2, 0.25))
+ticks = list(np.arange(B[1], B[4], 0.5)) + list(np.arange(B[4], B[5], 0.25))
 for j, k in enumerate(ticks):
     i0 = int(k * SR); L = int(0.03 * SR)
     noise = rng.standard_normal(L) * np.exp(-np.arange(L) / (0.004 * SR))
@@ -64,12 +67,13 @@ for c in CUTS:
     seg = boom + crack
     m = min(L2, n - j0); out[j0:j0 + m] += seg[:m, None]
 # hook: riser 0-2.1 then "vanish" shimmer
-L = int(2.1 * SR); tt = np.arange(L) / SR
-f = 200 + 800 * (tt / 2.1) ** 2
-riser = np.sin(2 * np.pi * np.cumsum(f) / SR) * (tt / 2.1) ** 2 * 0.25
+HV = 1.75  # Moment, in dem die Menschen verschwinden
+L = int(HV * SR); tt = np.arange(L) / SR
+f = 200 + 800 * (tt / HV) ** 2
+riser = np.sin(2 * np.pi * np.cumsum(f) / SR) * (tt / HV) ** 2 * 0.25
 out[:L] += riser[:, None]
 for k in range(40):
-    st = 2.1 + rng.uniform(0, 1.2); i0 = int(st * SR); L = int(0.5 * SR); tt = np.arange(L) / SR
+    st = HV + rng.uniform(0, 1.0); i0 = int(st * SR); L = int(0.5 * SR); tt = np.arange(L) / SR
     s = np.sin(2 * np.pi * rng.uniform(1500, 4500) * tt) * np.exp(-tt * 8) * 0.06
     p = rng.uniform(0, 1); out[i0:i0 + L, 0] += s * (1 - p); out[i0:i0 + L, 1] += s * p
 # final fade

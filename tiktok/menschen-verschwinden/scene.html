@@ -30,7 +30,19 @@ const S = {
   outro: [39.2, 44],
 };
 const DURATION = 44;
-window.DURATION = DURATION;
+// Video-Zeit -> Szenen-Zeit (jede Szene bekommt ihr eigenes Tempo, passend zum Sprecher)
+const SCENE_BOUNDS = [0, 3.6, 12.2, 20.8, 29.8, 39.2, 44];
+const VIDEO_BOUNDS = [0, 3.0, 10.0, 17.0, 23.6, 31.6, 36.5];
+function mapTime(v) {
+  for (let i = 0; i < VIDEO_BOUNDS.length - 1; i++) {
+    if (v < VIDEO_BOUNDS[i + 1] || i === VIDEO_BOUNDS.length - 2) {
+      const k = (v - VIDEO_BOUNDS[i]) / (VIDEO_BOUNDS[i + 1] - VIDEO_BOUNDS[i]);
+      return SCENE_BOUNDS[i] + Math.min(1, k) * (SCENE_BOUNDS[i + 1] - SCENE_BOUNDS[i]);
+    }
+  }
+}
+window.mapTime = mapTime;
+window.DURATION = VIDEO_BOUNDS[VIDEO_BOUNDS.length - 1];
 
 const SCENES = [
   { key: 'day',  pre: 'NACH', big: '1 TAG',     node: '1 Tag',
@@ -748,7 +760,7 @@ window.renderFrame = renderFrame;
 // preview mode: play in real-time when opened in a browser
 if (!location.hash.includes('render')) {
   const start = performance.now();
-  (function loop() { renderFrame(((performance.now() - start) / 1000) % DURATION); requestAnimationFrame(loop); })();
+  (function loop() { renderFrame(mapTime(((performance.now() - start) / 1000) % window.DURATION)); requestAnimationFrame(loop); })();
 }
 document.fonts.load(`900 100px Inter`).then(() => { window.READY = true; });
 </script>
