@@ -40,3 +40,7 @@ node render.js ../<slug>/scene.html /tmp/video.mp4
 ./mix.sh /tmp/music.wav /tmp/sfx.wav /tmp/news.wav /tmp/voice.wav /tmp/video.mp4 ../<slug>/<slug>_final.mp4
 ```
 Am Ende: Thema in `THEMEN.md` abhaken, README im Ordner (Ablauf, Sprechertext, Caption + Hashtags), committen, pushen.
+
+## Ton-Regeln (Wunsch des Nutzers)
+- **Keine undeutlichen Hintergrundgeräusche:** keine Rausch-Teppiche (Stadt-/Verkehrslärm, Wind, Grollen, Brummen, Knistern, Flügelschlag), keine verzerrten/verrauschten Hintergrundstimmen (TV/PA/Funk mit Bitcrusher), keine Pfeiftöne.
+- Erlaubt sind **klar erkennbare** Effekte, die zu einem sichtbaren Ereignis gehören (z.B. Wasser, Sirene, Geigerzähler, Explosion/Einsturz, Vögel, Übergangs-Whoosh, Pops). Hintergrund-Durchsagen nur klar verständlich (Filter `ALARM_CLEAR`).

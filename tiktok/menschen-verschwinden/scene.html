@@ -658,25 +658,26 @@ function drawOutro(t) {
   ctx.fillStyle = `rgba(5,6,14,${0.55 * a})`; ctx.fillRect(0, 0, W, H);
   const k1 = backOut(clamp((lt - 0.1) / 0.4));
   ctx.save(); ctx.translate(W / 2, 560); ctx.scale(k1, k1); strokeText('UND JETZT DU:', 0, 0, 74, '#ffd400', 900, 14); ctx.restore();
-  const lines = ['Was würde am', 'LÄNGSTEN', 'überleben?'];
-  lines.forEach((l, i) => {
+  const lines = [['Du wärst der', 92, '#fff'], ['LETZTE', 150, '#ff4d5e'], ['MENSCH.', 150, '#ff4d5e'], ['Was tust du als Erstes?', 70, '#ffd400']];
+  const ys = [690, 820, 960, 1095];
+  lines.forEach(([l, sz, col], i) => {
     const k = backOut(clamp((lt - 0.4 - i * 0.18) / 0.4));
     if (k <= 0) return;
-    ctx.save(); ctx.translate(W / 2, 720 + i * 135); ctx.scale(k, k);
-    strokeText(l, 0, 0, i === 1 ? 150 : 96, i === 1 ? '#ff4d5e' : '#fff', 900, 20); ctx.restore();
+    ctx.save(); ctx.translate(W / 2, ys[i]); ctx.scale(k, k);
+    strokeText(l, 0, 0, sz, col, 900, 20); ctx.restore();
   });
   const k3 = clamp((lt - 1.4) / 0.4);
   if (k3 > 0) {
     ctx.globalAlpha = k3;
     const bob = Math.sin(lt * 6) * 10;
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(W / 2 - 410, 1080 + bob, 820, 110, 55); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(W / 2 - 410, 1200 + bob, 820, 110, 55); ctx.fill();
     ctx.fillStyle = '#111'; ctx.font = `900 50px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('Schreib’s in die Kommentare', W / 2, 1137 + bob);
+    ctx.fillText('Schreib’s in die Kommentare', W / 2, 1257 + bob);
     // arrow down
-    ctx.fillStyle = '#ffd400'; ctx.beginPath(); ctx.moveTo(W / 2 - 40, 1230 + bob * 1.5); ctx.lineTo(W / 2 + 40, 1230 + bob * 1.5); ctx.lineTo(W / 2, 1290 + bob * 1.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd400'; ctx.beginPath(); ctx.moveTo(W / 2 - 40, 1345 + bob * 1.5); ctx.lineTo(W / 2 + 40, 1345 + bob * 1.5); ctx.lineTo(W / 2, 1400 + bob * 1.5); ctx.closePath(); ctx.fill();
   }
   const k4 = clamp((lt - 2.2) / 0.4);
-  if (k4 > 0) { ctx.globalAlpha = k4; strokeText('Folge für Teil 2', W / 2, 1360, 60, '#fff', 800, 12); }
+  if (k4 > 0) { ctx.globalAlpha = k4; strokeText('Folge für Teil 2', W / 2, 1470, 60, '#fff', 800, 12); }
   ctx.restore();
 }
 

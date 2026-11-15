@@ -8,7 +8,8 @@ TV = "highpass=f=300,lowpass=f=3800,acrusher=bits=10:mix=0.25,aecho=0.8:0.5:25:0
 PA = "highpass=f=450,lowpass=f=3000,acrusher=bits=9:mix=0.3,aecho=0.8:0.75:280|560|900:0.45|0.3|0.18"
 ALARM = "highpass=f=400,lowpass=f=3200,flanger=delay=2:depth=3:speed=6,acrusher=bits=8:mix=0.35,aecho=0.8:0.7:180|420:0.4|0.25"
 RADIO = "highpass=f=500,lowpass=f=2800,acrusher=bits=7:mix=0.45,tremolo=f=7:d=0.25,aecho=0.8:0.4:30:0.2"
-FILTERS = {"TV": TV, "PA": PA, "ALARM": ALARM, "RADIO": RADIO}
+ALARM_CLEAR = "highpass=f=250,lowpass=f=6500,aecho=0.8:0.5:120|260:0.25|0.12"
+FILTERS = {"TV": TV, "PA": PA, "ALARM": ALARM, "RADIO": RADIO, "ALARM_CLEAR": ALARM_CLEAR}
 # (Start s, Ende/Abbruch s, Text, Filter, Lautstärke)
 LINES = [(s, e, t, FILTERS[f], v) for s, e, t, f, v in json.load(open(sys.argv[3]))]
 tmp = tempfile.mkdtemp(); inputs = []; fl = []
