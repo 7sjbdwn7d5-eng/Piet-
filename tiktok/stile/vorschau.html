@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>Stil-Vorschau</title>
+<style>@font-face{font-family:'Anton';src:url('../fonts/anton-latin-400-normal.woff2') format('woff2')} html,body{margin:0;background:#000} canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// Stil-Vorschau: dieselbe Szene (Ballon über der Grenze bei Nacht) in verschiedenen Grafik-Stilen.
+// renderStyle(name) zeichnet ein Standbild.
+const W = 1080, H = 1920, ctx = document.getElementById('c').getContext('2d');
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const circ = (x, y, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+const poly = (p, c) => { ctx.fillStyle = c; ctx.beginPath(); p.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath(); ctx.fill(); };
+function label(t) { ctx.font = '96px Anton'; ctx.textAlign = 'center'; ctx.lineWidth = 14; ctx.strokeStyle = '#000'; ctx.strokeText(t, 540, 1780); ctx.fillStyle = '#fff'; ctx.fillText(t, 540, 1780); }
+function balloonShape(cx, cy, rw, rh) { ctx.beginPath(); ctx.ellipse(cx, cy, rw, rh, 0, Math.PI * 0.85, Math.PI * 2.15); ctx.lineTo(cx + 60, cy + rh + 40); ctx.lineTo(cx - 60, cy + rh + 40); ctx.closePath(); }
+function towerShape(x, base, s) { return [[x - 30 * s, base], [x - 30 * s, base - 420 * s], [x - 70 * s, base - 420 * s], [x - 70 * s, base - 510 * s], [x + 70 * s, base - 510 * s], [x + 70 * s, base - 420 * s], [x + 30 * s, base - 420 * s], [x + 30 * s, base]]; }
+function pines(base, n, s, c, seed) { const r = rng(seed); for (let i = 0; i < n; i++) { const x = -60 + i * 1200 / n + r() * 40, k = s * (0.8 + r() * 0.5); poly([[x - 80 * k, base], [x, base - 330 * k], [x + 80 * k, base]], c); } }
+
+const STYLES = {
+  // 1) COMIC / Graphic Novel: dicke Konturen, Rasterpunkte, Speedlines, Sprechblase
+  comic() {
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1b2a6b'); g.addColorStop(1, '#5a3a8a'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; for (let y = 0; y < H; y += 26) for (let x = (y / 26 % 2) * 13; x < W; x += 26) { ctx.beginPath(); ctx.arc(x, y, 5 + 4 * (y / H), 0, 7); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 4; for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(540 + Math.cos(a) * 520, 800 + Math.sin(a) * 520); ctx.lineTo(540 + Math.cos(a) * 1300, 800 + Math.sin(a) * 1300); ctx.stroke(); }
+    ctx.lineJoin = 'round'; ctx.lineWidth = 14; ctx.strokeStyle = '#111';
+    balloonShape(540, 760, 300, 360); ctx.fillStyle = '#ffcc2a'; ctx.fill(); ctx.stroke();
+    ctx.save(); balloonShape(540, 760, 300, 360); ctx.clip(); for (let i = -3; i <= 3; i += 2) { ctx.fillStyle = '#e8362c'; ctx.fillRect(540 + i * 60 - 30, 300, 60, 900); } ctx.restore();
+    balloonShape(540, 760, 300, 360); ctx.stroke();
+    ctx.fillStyle = '#8a5a2a'; ctx.fillRect(440, 1260, 200, 40); ctx.strokeRect(440, 1260, 200, 40);
+    const tw = towerShape(880, 1560, 1); poly(tw, '#c9ccd0'); ctx.beginPath(); tw.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle = '#2a3a2a'; ctx.fillRect(0, 1560, W, 400); ctx.strokeRect(-10, 1560, W + 20, 400);
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(300, 330, 230, 120, 0, 0, 7); ctx.fill(); ctx.stroke(); poly([[330, 440], [420, 520], [400, 430]], '#fff'); ctx.beginPath(); ctx.moveTo(330, 440); ctx.lineTo(420, 520); ctx.lineTo(400, 430); ctx.stroke();
+    ctx.font = '64px Anton'; ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.fillText('LEISER!', 300, 355);
+    label('1 · COMIC');
+  },
+  // 2) PAPIER / Scherenschnitt: Ebenen mit Schlagschatten, Papier-Textur
+  papier() {
+    ctx.fillStyle = '#f0e2c4'; ctx.fillRect(0, 0, W, H);
+    const r = rng(5); for (let i = 0; i < 4000; i++) { ctx.fillStyle = `rgba(120,90,50,${r() * 0.05})`; ctx.fillRect(r() * W, r() * H, 2, 2); }
+    const layer = (fn, col, dy) => { ctx.save(); ctx.shadowColor = 'rgba(60,40,20,0.45)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 10; ctx.fillStyle = col; fn(); ctx.restore(); };
+    layer(() => { ctx.beginPath(); ctx.arc(820, 380, 90, 0, 7); ctx.fill(); }, '#fff6dc');
+    layer(() => { ctx.beginPath(); ctx.moveTo(0, 1250); for (let x = 0; x <= W; x += 60) ctx.lineTo(x, 1180 + Math.sin(x * 0.01) * 60); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill(); }, '#c9b38a');
+    layer(() => { balloonShape(520, 760, 280, 340); ctx.fill(); }, '#d9573b');
+    layer(() => { ctx.beginPath(); ctx.ellipse(520, 760, 120, 340, 0, 0, 7); ctx.fill(); }, '#f2b23a');
+    layer(() => { ctx.fillRect(430, 1220, 180, 34); }, '#8a5a32');
+    layer(() => { ctx.beginPath(); ctx.moveTo(0, 1450); for (let x = 0; x <= W; x += 80) ctx.lineTo(x, 1400 + Math.sin(x * 0.02 + 1) * 50); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill(); }, '#7a8a5a');
+    layer(() => { const p = towerShape(860, 1500, 0.9); ctx.beginPath(); p.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.fill(); }, '#a8a090');
+    layer(() => { ctx.beginPath(); ctx.moveTo(0, 1650); for (let x = 0; x <= W; x += 70) ctx.lineTo(x, 1600 + Math.sin(x * 0.015 + 2) * 40); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill(); }, '#4a5a3a');
+    label('2 · PAPIER-SCHERENSCHNITT');
+  },
+  // 3) SILHOUETTE / Noir: alles schwarz vor leuchtendem Himmel
+  silhouette() {
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0c0420'); g.addColorStop(0.55, '#c2324a'); g.addColorStop(1, '#ffb347'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    circ(540, 1150, 260, 'rgba(255,220,160,0.9)');
+    const r = rng(9); for (let i = 0; i < 120; i++) { ctx.fillStyle = `rgba(255,255,255,${r() * 0.8})`; ctx.fillRect(r() * W, r() * 700, 2, 2); }
+    ctx.fillStyle = '#05030a';
+    balloonShape(540, 820, 250, 300); ctx.fill(); ctx.fillRect(460, 1170, 160, 26); ctx.lineWidth = 5; ctx.strokeStyle = '#05030a'; ctx.beginPath(); ctx.moveTo(480, 1160); ctx.lineTo(470, 1170); ctx.moveTo(600, 1160); ctx.lineTo(610, 1170); ctx.stroke();
+    for (let i = 0; i < 4; i++) { circ(485 + i * 36, 1150, 14, '#05030a'); }
+    poly(towerShape(850, 1560, 1.1), '#05030a');
+    const ang = 1.95; ctx.fillStyle = 'rgba(255,255,230,0.35)'; ctx.beginPath(); ctx.moveTo(850, 1010); ctx.lineTo(850 + Math.cos(ang - 0.1) * 1500, 1010 + Math.sin(ang - 0.1) * -1500); ctx.lineTo(850 + Math.cos(ang + 0.1) * 1500, 1010 + Math.sin(ang + 0.1) * -1500); ctx.fill();
+    pines(1640, 10, 1.1, '#05030a', 3); ctx.fillStyle = '#05030a'; ctx.fillRect(0, 1620, W, 400);
+    label('3 · SILHOUETTE');
+  },
+  // 4) PIXEL-ART: Retro-Spiel-Look
+  pixel() {
+    const P = 24, cw = Math.ceil(W / P), ch = Math.ceil(H / P);
+    const off = document.createElement('canvas'); off.width = cw; off.height = ch; const o = off.getContext('2d');
+    const g = o.createLinearGradient(0, 0, 0, ch); g.addColorStop(0, '#0d0b2a'); g.addColorStop(1, '#3b2a6a'); o.fillStyle = g; o.fillRect(0, 0, cw, ch);
+    const r = rng(2); for (let i = 0; i < 40; i++) { o.fillStyle = '#ffffff'; o.fillRect((r() * cw) | 0, (r() * ch * 0.6) | 0, 1, 1); }
+    o.fillStyle = '#f2e7a0'; o.beginPath(); o.arc(36, 14, 4, 0, 7); o.fill();
+    o.fillStyle = '#e8432c'; o.beginPath(); o.ellipse(22, 32, 11, 13, 0, 0, 7); o.fill(); o.fillStyle = '#f7c531'; o.fillRect(19, 19, 3, 26); o.fillRect(25, 19, 3, 26);
+    o.fillStyle = '#8a5a32'; o.fillRect(19, 51, 7, 2); o.fillStyle = '#5a5a5a'; o.fillRect(18, 45, 1, 6); o.fillRect(27, 45, 1, 6);
+    o.fillStyle = '#9a9a9a'; o.fillRect(36, 44, 3, 21); o.fillRect(34, 41, 7, 4);
+    for (let i = 0; i < 11; i++) { o.fillStyle = '#1e4a2a'; o.beginPath(); o.moveTo(i * 4.5, 68); o.lineTo(i * 4.5 + 2.5, 58); o.lineTo(i * 4.5 + 5, 68); o.fill(); }
+    o.fillStyle = '#123018'; o.fillRect(0, 68, cw, ch - 68);
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(off, 0, 0, cw * P, ch * P); ctx.imageSmoothingEnabled = true;
+    ctx.fillStyle = '#fff'; ctx.font = '60px Anton'; ctx.textAlign = 'left'; ctx.fillText('LEVEL 1: GRENZE', 60, 200); ctx.fillText('♥ ♥ ♥', 60, 280);
+    label('4 · PIXEL-ART');
+  },
+};
+window.renderStyle = n => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H); STYLES[n](); };
+document.fonts.load('100px Anton').then(() => { window.READY = true; });
+</script></body></html>
