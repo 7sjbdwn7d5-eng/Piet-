@@ -2,7 +2,18 @@
 
 Format: TikTok 1080×1920, 30 fps, **30–40 s**, Deutsch. Ordner pro Folge: `tiktok/<slug>/`.
 
-## Aktuelles Format: „Ein Tag als …" / „Die letzten Stunden von …" (Vorlage: `gladiator/`)
+## AKTUELLES FORMAT: Story (Vorlage: `pompeji/`) – Wunsch des Nutzers nach Vorbild-Video
+- **Kleine Geschichte mit 1–2 erfundenen Figuren** (Name! z.B. Bäcker Marcus + Hund Felix) in einer **echten** Situation/Epoche.
+  Präsens, kurze Sätze, Spannung, Gefühl; Ende = **Cliffhanger** („Schaffen es die beiden?" + „Teil 2 folgt").
+- **Grafik:** flache Vektor-Illustration mit detailreichen Kulissen; Figuren mit runden Köpfen, großen Augen, Augenbrauen-Mimik
+  (`face()` moods: calm/happy/worried/shock/sad), Schweißtropfen; Tier-Nahaufnahmen (`dogHead()`); Nahaufnahmen mit
+  **unscharfem Hintergrund** (`blurred()`), ständige Kamerafahrten (`camera()`), etwa alle 2 s eine neue Einstellung.
+- **Untertitel:** `tools/captions.py` erzeugt aus lines.json (`[start, TTS-Text, UNTERTITEL mit *ROT*-Wörtern, pos]`) 2–3-Wort-Häppchen,
+  Schrift **Anton** (`tiktok/fonts/`), weiß, wichtige/gefährliche Wörter rot; bei Gesichts-Nahaufnahmen oben (Liste `TOP` in scene.html).
+- **REAL-Schild** oben links: grüne Pille „REAL" + echter Fakt (Quellen im README). Kein Zeitstrahl, keine Fakt-Kästen.
+- Ton: nur klar erkennbare Effekte zu sichtbaren Ereignissen (Tierlaute, Kette, Knall, Herzschlag, Schritte …), am Ende Stille.
+
+## Früheres Format: „Ein Tag als …" / „Die letzten Stunden von …" (Vorlage: `gladiator/`)
 - Hook (≈4 s): „EIN TAG ALS [ROLLE]" + Ort/Epoche + „Würdest DU überleben?" mit Fahrt in die Welt hinein.
 - 4 Uhrzeit-Szenen (z.B. 06:00 / 12:00 / 15:00 / 16:00 + Titel) statt Zeitsprüngen; Timeline-Knoten = Uhrzeiten; rote Pille = Ort.
 - Pro Szene 2–5 Einstellungen mit Figuren (Funktion `gladiator()` als Beispiel für eine Figur mit Posen), Nahaufnahmen von Gegenständen, große Stempel/Zahlen, Wisch-Übergänge.
