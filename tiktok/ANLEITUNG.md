@@ -7,7 +7,7 @@ Format: TikTok 1080×1920, 30 fps, **30–40 s**, Deutsch. Ordner pro Folge: `ti
   Präsens, kurze Sätze, Spannung, Gefühl; Ende = **Cliffhanger** („Schaffen es die beiden?" + „Teil 2 folgt").
 - **Grafik:** flache Vektor-Illustration mit detailreichen Kulissen; Figuren mit runden Köpfen, großen Augen, Augenbrauen-Mimik
   (`face()` moods: calm/happy/worried/shock/sad), Schweißtropfen; Tier-Nahaufnahmen (`dogHead()`); Nahaufnahmen mit
-  **unscharfem Hintergrund** (`blurred()`), ständige Kamerafahrten (`camera()`), etwa alle 2 s eine neue Einstellung.
+  **unscharfem Hintergrund** (`blurred()` / `layer()` – NIE `ctx.filter` pro Bild verwenden, das macht das Rendern 30× langsamer), ständige Kamerafahrten (`camera()`), etwa alle 2 s eine neue Einstellung.
 - **Untertitel:** `tools/captions.py` erzeugt aus lines.json (`[start, TTS-Text, UNTERTITEL mit *ROT*-Wörtern, pos]`) 2–3-Wort-Häppchen,
   Schrift **Anton** (`tiktok/fonts/`), weiß, wichtige/gefährliche Wörter rot; bei Gesichts-Nahaufnahmen oben (Liste `TOP` in scene.html).
 - **REAL-Schild** oben links: grüne Pille „REAL" + echter Fakt (Quellen im README). Kein Zeitstrahl, keine Fakt-Kästen.

@@ -17,7 +17,9 @@
 //  unscharfe Hintergründe, 2–3-Wort-Untertitel, REAL-Fakten-Schild.
 // ============================================================
 const W = 1080, H = 1920;
-const ctx = document.getElementById('c').getContext('2d');
+let ctx = document.getElementById('c').getContext('2d');
+const MAIN = ctx;
+const OFF = {};
 const CAP = '"Anton", "Inter", sans-serif', UI = '"Inter", sans-serif';
 
 // ---- Zeitplan (Video-Sekunden) – auf den Sprecher gelegt ----
@@ -52,7 +54,16 @@ function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>>
 const R = rng(79); const rr = (a, b) => lerp(a, b, R());
 function shotOf(t) { let s = SHOTS[0]; for (const k of SHOTS) if (t >= T[k]) s = k; return s; }
 function nextT(k) { const i = SHOTS.indexOf(k); return i < SHOTS.length - 1 ? T[SHOTS[i + 1]] : T.out; }
-function blurred(px, fn) { ctx.save(); ctx.filter = `blur(${px}px)`; fn(); ctx.restore(); }
+// Schnelle Unschärfe: Ebene in kleiner Auflösung zeichnen und hochskaliert einblenden (statt teurem ctx.filter)
+function layer(factor, fn, filter = 'none') {
+  const key = factor; if (!OFF[key]) { const c = document.createElement('canvas'); c.width = Math.ceil(W / factor); c.height = Math.ceil(H / factor); OFF[key] = c; }
+  const oc = OFF[key], o = oc.getContext('2d'), main = ctx, m = main.getTransform();
+  o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, oc.width, oc.height);
+  o.setTransform(m.a / factor, m.b / factor, m.c / factor, m.d / factor, m.e / factor, m.f / factor);
+  ctx = o; try { fn(); } finally { ctx = main; }
+  main.save(); main.setTransform(1, 0, 0, 1, 0, 0); main.imageSmoothingEnabled = true; main.imageSmoothingQuality = 'high'; main.filter = filter; main.drawImage(oc, 0, 0, W, H); main.restore();
+}
+function blurred(px, fn) { layer(px >= 10 ? 7 : 5, fn); }
 function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
 function rrect(x, y, w, h, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); }
 function circ(x, y, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
@@ -188,7 +199,7 @@ const puffs = Array.from({ length: 70 }, () => ({ a: R(), b: R(), c: R(), d: R()
 function plume(cx, base, h, t, o = {}) {
   // pinienförmige Aschesäule (so beschrieb sie Plinius der Jüngere)
   const col = o.col || '#5a5358', dark = mixc(col, '#2a2428', 0.35), light = mixc(col, '#9a9096', 0.45);
-  ctx.save(); ctx.filter = 'blur(2px)';
+  layer(2, () => {
   // Säule: weiche Wölkchen entlang einer leicht schwankenden Achse
   for (let i = 0; i < 40; i++) { const p = puffs[i], k = i / 39, y = base - k * h * 0.8; const w = 50 + k * 70;
     const x = cx + Math.sin(k * 5 + t * 1.5) * 14 + (p.a - 0.5) * w * 0.9;
@@ -196,15 +207,15 @@ function plume(cx, base, h, t, o = {}) {
   // Schirm oben
   for (let i = 40; i < 70; i++) { const p = puffs[i]; const ang = p.a * Math.PI * 2 + t * 0.15, rx = h * (0.22 + 0.25 * p.b), ry = h * (0.06 + 0.07 * p.d);
     circ(cx + Math.cos(ang) * rx, base - h * 0.86 + Math.sin(ang) * ry - p.c * h * 0.05, h * (0.08 + 0.07 * p.c) + 20, p.d > 0.5 ? col : (p.d > 0.2 ? light : dark)); }
-  ctx.restore();
+  });
 }
 function pyroFlow(points, t, o = {}) {
   // Glutwolke: wogende, glühende Front entlang eines Pfades
-  ctx.save(); ctx.filter = 'blur(3px)';
+  layer(2, () => {
   for (let i = 0; i < points.length; i++) { const [x, y, r] = points[i]; const p = puffs[i % 70];
     circ(x + (p.a - 0.5) * r * 0.6, y - p.b * r * 0.5, r * (0.7 + p.c * 0.5), p.d > 0.5 ? '#7a625c' : '#9a7a6c');
     circ(x + (p.b - 0.5) * r * 0.5, y + r * 0.25, r * 0.6, `rgba(255,${140 + (p.c * 60) | 0},60,0.55)`); }
-  ctx.restore();
+  });
 }
 
 // ============================================================
@@ -364,7 +375,7 @@ SH.flee = (t, lt, len) => {
 };
 SH.end = (t, lt, len) => {
   // Standbild der Flucht, entsättigt
-  ctx.save(); ctx.filter = 'grayscale(0.9) brightness(0.55)'; SH.flee(T.end, 0.1, 1); ctx.restore();
+  layer(1, () => SH.flee(T.end, 0.1, 1), 'grayscale(0.9) brightness(0.55)');
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, W, H);
   const k1 = backOut(clamp((lt - 0.1) / 0.4));
   if (k1 > 0) { ctx.save(); ctx.translate(540, 820); ctx.scale(k1, k1); capText([['SCHAFFEN ES', '#fff'], ['DIE BEIDEN?', '#ff3b30']], 0, 0, 150, true); ctx.restore(); }
