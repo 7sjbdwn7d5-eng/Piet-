@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>Tunnel 57</title>
+<style>
+  @font-face{font-family:'Poppins';font-weight:800;src:url('../fonts/poppins-latin-800-normal.woff2') format('woff2')}
+  html,body{margin:0;background:#000} canvas{display:block}
+</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../lib/three.min.js"></script>
+<script>
+// ============================================================
+//  3D-Querschnitt-Stil: „Tunnel 57" (Berlin 1964)
+//  Eine 3D-Welt (three.js, Low-Poly, weiches Licht), viele Kamera-Einstellungen,
+//  animierte Figuren, gelbe Untertitel-Schilder, grünes REAL-Schild.
+// ============================================================
+const W = 1080, H = 1920;
+const out = document.getElementById('c'), octx = out.getContext('2d');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H, false); renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.5, 600);
+
+// ---------- Zeitplan (Video-Sekunden) ----------
+const T = { aerial: 0, wall: 2.3, bakery: 4.6, cellar: 6.6, depth: 8.85, cm70: 10.2, crawl: 12.0, buckets: 13.68, months: 15.68, meters: 17.07,
+  east: 18.92, exit: 19.62, toilet: 20.62, tokio: 22.65, escape: 24.05, free: 26.3, digger: 28.27, space: 30.0, end: 32.31, out: 36.4 };
+window.DURATION = T.out;
+const SHOTS = Object.keys(T).filter(k => k !== 'out');
+const REAL = [
+  [T.bakery + 0.2, T.depth, 'Start: Keller einer Bäckerei, Bernauer Straße'],
+  [T.depth + 0.2, T.buckets, 'Ca. 12 m tief und ca. 70 cm hoch'],
+  [T.buckets + 0.2, T.east, 'Gegraben von Studenten – rund ein halbes Jahr'],
+  [T.toilet + 0.2, T.escape, 'Ausgang: Hoftoilette, Strelitzer Straße 55'],
+  [T.escape + 0.2, T.digger, '3./4. Oktober 1964: 57 Menschen flohen'],
+  [T.space + 0.2, T.end, 'Reinhard Furrer: Tunnelgräber, 1985 im All'],
+];
+let CAPTIONS = [];
+window.setCaptions = c => { CAPTIONS = c; };
+
+// ---------- Hilfen ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const inv = (a, b, x) => clamp((x - a) / (b - a));
+const ease = k => k * k * (3 - 2 * k);
+const backOut = k => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const R = rng(57);
+const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, metalness: 0, ...o });
+function mesh(geo, m, x = 0, y = 0, z = 0, parent = scene) { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; }
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+function signTex(text, bg, fg, w = 512, h = 128) { return canvasTex(w, h, (g) => { g.fillStyle = bg; g.fillRect(0, 0, w, h); g.fillStyle = fg; g.font = `900 ${h * 0.55}px Inter`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 4); }); }
+function shotOf(t) { let s = SHOTS[0]; for (const k of SHOTS) if (t >= T[k]) s = k; return s; }
+function nextT(k) { const i = SHOTS.indexOf(k); return i < SHOTS.length - 1 ? T[SHOTS[i + 1]] : T.out; }
+
+// ---------- Licht ----------
+const hemi = new THREE.HemisphereLight('#dff0ff', '#6a5a40', 1.1); scene.add(hemi);
+const sun = new THREE.DirectionalLight('#fff4e0', 2.2); sun.position.set(-20, 34, 26); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 120 }); sun.shadow.radius = 4; scene.add(sun);
+
+// ============================================================
+//  WELT BERLIN (Querschnitt)
+// ============================================================
+const world = new THREE.Group(); scene.add(world);
+const GW = 44, GD = 12, FRONT = GD / 2;
+const X_WEST = -14, X_WALL = -2, X_HINTER = 5.5, X_EAST = 13;   // Bäckerei-Schacht, Mauer, Hinterlandmauer, Klohäuschen
+const TY = -12;                                                  // Tunnel-Tiefe (Mitte)
+const layers = [[0.35, '#5fae47', 'grass'], [1.4, '#4a3424', 'dark'], [12.5, '#8a5a36', 'soil'], [6, '#8a8f98', 'rock']];
+let yTop = 0;
+for (const [th, col, kind] of layers) {
+  const tex = canvasTex(2048, Math.max(64, Math.round(2048 * th / GW)), (g, w, h) => {
+    g.fillStyle = col; g.fillRect(0, 0, w, h);
+    if (kind !== 'grass' && kind !== 'rock') for (let i = 0; i < (kind === 'soil' ? 9000 : 2500); i++) { g.fillStyle = `rgba(${kind === 'dark' ? '30,20,14' : '110,70,40'},${0.25 + R() * 0.35})`; g.beginPath(); g.arc(R() * w, R() * h, 2 + R() * 6, 0, 7); g.fill(); }
+    if (kind === 'soil') { for (let i = 0; i < 130; i++) { g.fillStyle = '#c9c4bc'; g.beginPath(); g.ellipse(R() * w, R() * h, 5 + R() * 7, 4 + R() * 5, 0, 0, 7); g.fill(); }
+      for (let i = 0; i < 3; i++) { const x = 200 + R() * (w - 400), y = 100 + R() * (h - 200); g.strokeStyle = '#f2ece0'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 30, y); g.lineTo(x + 30, y); g.stroke(); for (const s of [-1, 1]) { g.fillStyle = '#f2ece0'; g.beginPath(); g.arc(x + s * 34, y - 6, 8, 0, 7); g.arc(x + s * 34, y + 6, 8, 0, 7); g.fill(); } }
+      g.strokeStyle = '#e8a0a0'; g.lineWidth = 6; g.beginPath(); g.arc(1700, h * 0.35, 18, Math.PI, Math.PI * 2.2); g.stroke(); }
+    if (kind === 'rock') { for (let i = 0; i < 300; i++) { const v = 120 + R() * 50; g.fillStyle = `rgba(${v},${v + 4},${v + 12},0.35)`; g.beginPath(); g.arc(R() * w, R() * h, 10 + R() * 30, 0, 7); g.fill(); }
+      g.strokeStyle = 'rgba(50,52,60,0.55)'; g.lineWidth = 2; for (let i = 0; i < 14; i++) { let x = R() * w, y = R() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (R() - 0.5) * 70; y += 10 + R() * 30; g.lineTo(x, y); } g.stroke(); }
+      g.strokeStyle = 'rgba(235,230,220,0.9)'; g.lineWidth = 5; g.beginPath(); const fx = 300, fy = h * 0.5; g.moveTo(fx, fy); g.lineTo(fx + 110, fy); for (let k = 0; k < 5; k++) { g.moveTo(fx + 20 + k * 18, fy - 18); g.lineTo(fx + 26 + k * 18, fy + 18); } g.moveTo(fx + 110, fy); g.lineTo(fx + 140, fy - 20); g.lineTo(fx + 140, fy + 20); g.closePath(); g.stroke(); }
+  });
+  const sideM = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }), topM = mat(kind === 'grass' ? '#5fae47' : col);
+  mesh(new THREE.BoxGeometry(GW, th, GD), [sideM, sideM, topM, topM, sideM, sideM], 0, yTop - th / 2, 0, world);
+  yTop -= th;
+}
+// Keller unter der Bäckerei (Querschnitt)
+const darkM = mat('#2a1a10', { roughness: 1 }), woodM = mat('#9a7448');
+mesh(new THREE.BoxGeometry(7, 3, 0.2), mat('#5a4a3c'), X_WEST - 1.5, -1.6, FRONT + 0.02, world);
+for (let i = 0; i < 4; i++) mesh(new THREE.BoxGeometry(0.2, 3, 0.3), mat('#7a6a5a'), X_WEST - 4.8 + i * 2.2, -1.6, FRONT + 0.08, world);
+// Westschacht, Tunnel, Ostschacht (wachsen mit der Zeit)
+const shaftW = mesh(new THREE.BoxGeometry(1.1, 1, 0.2), darkM, X_WEST, -3, FRONT + 0.03, world);
+const tunnel = mesh(new THREE.BoxGeometry(1, 0.8, 0.2), darkM, X_WEST, TY, FRONT + 0.03, world);
+const shaftE = mesh(new THREE.BoxGeometry(1.1, 1, 0.2), darkM, X_EAST, TY, FRONT + 0.03, world);
+const props = [];
+for (let i = 0; i < 12; i++) { const g = new THREE.Group(); mesh(new THREE.BoxGeometry(0.12, 0.8, 0.3), woodM, 0, 0, 0, g); mesh(new THREE.BoxGeometry(0.7, 0.1, 0.3), woodM, 0, 0.4, 0, g); g.position.set(X_WEST + 1 + i * 2.2, TY, FRONT + 0.12); world.add(g); props.push(g); }
+const lamps = [];
+for (let i = 0; i < 6; i++) { const b = mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshStandardMaterial({ color: '#ffe0a0', emissive: '#ffcc66', emissiveIntensity: 2 }), X_WEST + 2 + i * 4.4, TY + 0.3, FRONT + 0.2, world); lamps.push(b); }
+const tLight = new THREE.PointLight('#ffc070', 8, 9, 1.4); tLight.position.set(0, TY + 0.2, FRONT + 1); world.add(tLight);
+// Erdhaufen im Keller
+const pile = mesh(new THREE.ConeGeometry(1.4, 1.4, 9), mat('#7a4e2e', { flatShading: true }), X_WEST - 3.5, -2.4, FRONT - 0.6, world);
+// Eimer-Schlitten
+const sled = new THREE.Group(); world.add(sled);
+mesh(new THREE.BoxGeometry(1.0, 0.12, 0.6), woodM, 0, -0.32, 0, sled);
+for (const dx of [-0.25, 0.25]) mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.36, 14), mat('#9aa0a8', { metalness: 0.4, roughness: 0.4 }), dx, -0.08, 0, sled);
+const rope = mesh(new THREE.BoxGeometry(1, 0.03, 0.03), mat('#c8b080'), 0, TY - 0.3, FRONT + 0.3, world);
+
+// ---------- Oberfläche ----------
+function house(x, z, w, h, d, wall, roofC, sign) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); world.add(g);
+  mesh(new THREE.BoxGeometry(w, h, d), mat(wall), 0, h / 2, 0, g);
+  const roof = mesh(new THREE.CylinderGeometry(0.01, w * 0.78, 2.2, 4, 1), mat(roofC, { flatShading: true }), 0, h + 1.1, 0, g); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, d / w);
+  for (const wx of [-w * 0.27, w * 0.27]) for (const wy of [0.62, 0.32]) mesh(new THREE.BoxGeometry(w * 0.2, h * 0.17, 0.05), mat('#22324a', { roughness: 0.2 }), wx, h * wy, d / 2 + 0.03, g);
+  mesh(new THREE.BoxGeometry(w * 0.2, h * 0.3, 0.05), mat('#6a4a30'), 0, h * 0.15, d / 2 + 0.03, g);
+  if (sign) { const s = mesh(new THREE.PlaneGeometry(w * 0.7, w * 0.17), new THREE.MeshStandardMaterial({ map: signTex(sign, '#2a4a7a', '#ffffff') }), 0, h * 0.84, d / 2 + 0.05, g); s.castShadow = false; }
+  return g;
+}
+house(X_WEST, -1.5, 6, 6, 5, '#f2ede4', '#c8553a', 'BÄCKEREI');
+house(X_WEST - 7.5, -1, 5, 7, 5, '#e8d8c0', '#a8483a');
+house(X_EAST + 3.5, -2.5, 6, 7, 5, '#d8c8a8', '#8a6a5a');
+house(X_EAST - 3.5, -3.5, 4, 5.5, 4, '#cfc2a8', '#7a5a4a');
+// Mauer (Segmente mit Rohr), Todesstreifen, Hinterlandmauer, Wachturm
+for (let i = 0; i < 5; i++) { const z = -4.8 + i * 2.4; mesh(new THREE.BoxGeometry(0.35, 3.6, 2.3), mat('#cfd0cc'), X_WALL, 1.8, z, world); const p = mesh(new THREE.CylinderGeometry(0.32, 0.32, 2.3, 16), mat('#d8d9d6'), X_WALL, 3.7, z, world); p.rotation.x = Math.PI / 2; }
+mesh(new THREE.BoxGeometry(X_HINTER - X_WALL, 0.06, GD), mat('#d9c49a'), (X_WALL + X_HINTER) / 2, 0.03, 0, world);
+for (let i = 0; i < 5; i++) mesh(new THREE.BoxGeometry(0.3, 2.2, 2.3), mat('#bfc0bc'), X_HINTER, 1.1, -4.8 + i * 2.4, world);
+const towerG = new THREE.Group(); towerG.position.set(1.8, 0, -2.5); world.add(towerG);
+mesh(new THREE.BoxGeometry(1.0, 6, 1.0), mat('#c8c8c2'), 0, 3, 0, towerG);
+mesh(new THREE.BoxGeometry(2.0, 1.3, 2.0), mat('#b8b8b2'), 0, 6.6, 0, towerG);
+mesh(new THREE.BoxGeometry(1.8, 0.6, 2.02), mat('#2a3a48', { roughness: 0.2, metalness: 0.3 }), 0, 6.7, 0, towerG);
+mesh(new THREE.BoxGeometry(2.3, 0.18, 2.3), mat('#8a8a84'), 0, 7.35, 0, towerG);
+// Hinterhof Ost mit Klohäuschen (Ausgang)
+const outhouse = new THREE.Group(); outhouse.position.set(X_EAST, 0, 3.2); world.add(outhouse);
+const ohM = mat('#8a6a42');
+mesh(new THREE.BoxGeometry(1.2, 2.0, 0.08), ohM, 0, 1.0, -0.56, outhouse); mesh(new THREE.BoxGeometry(0.08, 2.0, 1.2), ohM, -0.56, 1.0, 0, outhouse); mesh(new THREE.BoxGeometry(0.08, 2.0, 1.2), ohM, 0.56, 1.0, 0, outhouse);
+mesh(new THREE.BoxGeometry(1.2, 0.25, 0.08), ohM, 0, 1.88, 0.56, outhouse);
+mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), mat('#a8804e'), 0, 0.25, -0.25, outhouse);              // Sitzbank
+mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 16), mat('#1a100a'), 0, 0.51, -0.25, outhouse);      // Loch
+const ohLight = new THREE.PointLight('#ffd890', 0, 4, 1.5); ohLight.position.set(0, 1.6, 0.2); outhouse.add(ohLight);
+mesh(new THREE.BoxGeometry(1.4, 0.15, 1.4), mat('#6a4a2a'), 0, 2.07, 0, outhouse);
+const door = new THREE.Group(); door.position.set(-0.5, 0, 0.62); outhouse.add(door);
+mesh(new THREE.BoxGeometry(1.0, 1.8, 0.06), mat('#a8804e'), 0.5, 0.92, 0, door);
+mesh(new THREE.PlaneGeometry(0.2, 0.3), mat('#2a1a10'), 0.5, 1.5, 0.04, door);
+const yardLamp = new THREE.PointLight('#ffd8a0', 0, 14, 1.2); yardLamp.position.set(X_EAST - 1.5, 4, 5); world.add(yardLamp);
+mesh(new THREE.SphereGeometry(0.15, 10, 8), new THREE.MeshStandardMaterial({ color: '#ffe0a0', emissive: '#ffcc66', emissiveIntensity: 2 }), X_EAST - 1.5, 4, 5, world);
+// Bäume, Zaun, Wäscheleine, Laternen
+function tree(x, z, s) { mesh(new THREE.CylinderGeometry(0.22 * s, 0.3 * s, 2 * s, 7), mat('#7a5232'), x, s, z, world); const c = mat('#4f9a3a', { flatShading: true, roughness: 0.9 }); mesh(new THREE.IcosahedronGeometry(1.5 * s, 0), c, x, 2.6 * s, z, world); mesh(new THREE.IcosahedronGeometry(1.1 * s, 0), c, x + 0.9 * s, 3.3 * s, z + 0.3, world); }
+tree(X_WEST - 4, 2.5, 1.0); tree(X_WEST + 5, -3.5, 1.2); tree(X_EAST - 1, -2, 1.0); tree(X_EAST + 7, 2.2, 0.9); tree(-19, -3, 1.3);
+for (let i = 0; i < 10; i++) mesh(new THREE.BoxGeometry(0.12, 0.9, 0.06), mat('#ffffff'), X_EAST + 4 + i * 0.36, 0.45, 4.4, world);
+for (const [x, c] of [[X_WEST - 6.3, '#e8432c'], [X_WEST - 5.6, '#ffffff'], [X_WEST - 4.9, '#2e6fd8'], [X_WEST - 4.2, '#f2c531']]) mesh(new THREE.BoxGeometry(0.55, 0.75, 0.03), mat(c), x, 2.3, 2.5, world);
+
+// ============================================================
+//  FIGUREN (Knet-Look mit Gesicht, animierbare Glieder)
+// ============================================================
+function figure(o = {}) {
+  const g = new THREE.Group(), parts = {};
+  const skin = mat(o.skin || '#f0b890', { roughness: 0.6 }), shirt = mat(o.shirt || '#3a6ab0', { roughness: 0.7 }), pants = mat(o.pants || '#2a3348');
+  parts.body = mesh(new THREE.CapsuleGeometry(0.32, 0.5, 6, 12), shirt, 0, 0.95, 0, g);
+  const head = new THREE.Group(); head.position.set(0, 1.68, 0); g.add(head); parts.head = head;
+  mesh(new THREE.SphereGeometry(0.34, 24, 16), skin, 0, 0, 0, head);
+  mesh(new THREE.SphereGeometry(0.355, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2.3), mat(o.hair || '#4a2c1a'), 0, 0.04, -0.02, head);
+  for (const s of [-1, 1]) { mesh(new THREE.SphereGeometry(0.075, 12, 10), mat('#ffffff', { roughness: 0.3 }), s * 0.12, 0.02, 0.29, head); mesh(new THREE.SphereGeometry(0.042, 10, 8), mat('#1a1410', { roughness: 0.2 }), s * 0.12, 0.02, 0.35, head); }
+  const mouth = mesh(new THREE.TorusGeometry(0.07, 0.018, 6, 12, Math.PI), mat('#7a3a2a'), 0, -0.13, 0.31, head); mouth.rotation.z = Math.PI; parts.mouth = mouth;
+  if (o.helmet) mesh(new THREE.SphereGeometry(0.38, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2.4), mat('#e0b040', { roughness: 0.35 }), 0, 0.08, 0, head);
+  if (o.cap) { mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.16, 16), mat(o.cap), 0, 0.27, 0, head); mesh(new THREE.BoxGeometry(0.5, 0.04, 0.25), mat('#1a1a1a'), 0, 0.2, 0.3, head); }
+  for (const s of [-1, 1]) {
+    const arm = new THREE.Group(); arm.position.set(s * 0.4, 1.3, 0); g.add(arm); mesh(new THREE.CapsuleGeometry(0.1, 0.5, 4, 8), shirt, 0, -0.32, 0, arm); mesh(new THREE.SphereGeometry(0.11, 10, 8), skin, 0, -0.66, 0, arm); parts[s < 0 ? 'armL' : 'armR'] = arm;
+    const leg = new THREE.Group(); leg.position.set(s * 0.15, 0.62, 0); g.add(leg); mesh(new THREE.CapsuleGeometry(0.12, 0.45, 4, 8), pants, 0, -0.3, 0, leg); mesh(new THREE.BoxGeometry(0.2, 0.1, 0.3), mat('#2a2420'), 0, -0.6, 0.06, leg); parts[s < 0 ? 'legL' : 'legR'] = leg;
+  }
+  if (o.suit) { g.traverse(m => { if (m.isMesh && m.material !== skin && m.material.color && m.material.color.getHexString() !== '1a1410' && m.material.color.getHexString() !== 'ffffff') m.material = mat('#f2f2f0', { roughness: 0.5 }); }); mesh(new THREE.SphereGeometry(0.45, 20, 14), new THREE.MeshStandardMaterial({ color: '#bfe0ff', transparent: true, opacity: 0.35, roughness: 0.1 }), 0, 1.68, 0, g); }
+  g.userData.parts = parts; return g;
+}
+function pose(f, kind, ph) {
+  const p = f.userData.parts, s = Math.sin(ph);
+  if (kind === 'walk') { p.armL.rotation.x = s * 0.7; p.armR.rotation.x = -s * 0.7; p.legL.rotation.x = -s * 0.6; p.legR.rotation.x = s * 0.6; }
+  if (kind === 'crawl') { p.armL.rotation.x = -2.6 + s * 0.6; p.armR.rotation.x = -2.6 - s * 0.6; p.legL.rotation.x = s * 0.4; p.legR.rotation.x = -s * 0.4; }
+  if (kind === 'dig') { p.armL.rotation.x = -1.2 + s * 0.8; p.armR.rotation.x = -1.2 + s * 0.8; }
+  if (kind === 'cheer') { p.armL.rotation.z = -2.6 + s * 0.2; p.armR.rotation.z = 2.6 - s * 0.2; }
+  if (kind === 'stand') { for (const k of ['armL', 'armR', 'legL', 'legR']) p[k].rotation.set(0, 0, 0); }
+}
+// Darsteller
+const students = [figure({ shirt: '#c84a30', helmet: true }), figure({ shirt: '#3a8a5a', hair: '#c89a4a', helmet: true }), figure({ shirt: '#3a6ab0', hair: '#2a1a10' })];
+students.forEach(f => world.add(f));
+const guard = figure({ shirt: '#5a6a4a', pants: '#4a5a3a', cap: '#4a5a3a' }); guard.scale.setScalar(0.8); guard.position.set(0, 6.0, 0.4); towerG.add(guard);
+const refugees = [0, 1, 2, 3, 4].map(i => figure({ shirt: ['#8a5a8a', '#c8a040', '#5a7aa8', '#a85a4a', '#4a8a8a'][i], hair: ['#6a3a1a', '#2a1a10', '#c89a4a', '#3a2a1a', '#8a5a2a'][i] }));
+refugees.forEach(f => world.add(f));
+const popHead = figure({ shirt: '#c84a30', helmet: true }); world.add(popHead);
+
+// ============================================================
+//  WELTALL (Schluss-Pointe)
+// ============================================================
+const space = new THREE.Group(); scene.add(space);
+const starGeo = new THREE.BufferGeometry(), sp = []; for (let i = 0; i < 1500; i++) sp.push((R() - 0.5) * 400, (R() - 0.5) * 400, -150 - R() * 100);
+starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3)); space.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: '#ffffff', size: 1.2 })));
+const earth = mesh(new THREE.IcosahedronGeometry(30, 3), mat('#2e6fd8', { flatShading: true, roughness: 0.7 }), 0, -42, -40, space);
+for (let i = 0; i < 18; i++) { const c = mesh(new THREE.IcosahedronGeometry(4 + R() * 6, 0), mat('#4f9a3a', { flatShading: true }), 0, 0, 0, earth); const a = R() * Math.PI * 2, b = R() * Math.PI; c.position.setFromSphericalCoords(28.5, b, a); }
+const shuttle = new THREE.Group(); space.add(shuttle);
+mesh(new THREE.CapsuleGeometry(1.0, 5, 8, 16), mat('#f2f2f0'), 0, 0, 0, shuttle).rotation.z = Math.PI / 2;
+mesh(new THREE.ConeGeometry(1.0, 1.5, 16), mat('#2a2a2a'), 4.0, 0, 0, shuttle).rotation.z = -Math.PI / 2;
+const wing = new THREE.Shape(); wing.moveTo(0, 0); wing.lineTo(-3, -3.2); wing.lineTo(-3.6, -3.2); wing.lineTo(-2, 0);
+mesh(new THREE.ExtrudeGeometry(wing, { depth: 0.2, bevelEnabled: false }), mat('#e8e8e4'), 1, -0.3, 0.1, shuttle).rotation.x = Math.PI / 2;
+mesh(new THREE.BoxGeometry(1.4, 1.8, 0.2), mat('#e8e8e4'), -2.6, 1.3, 0, shuttle);
+const flame = mesh(new THREE.ConeGeometry(0.7, 2.5, 12), new THREE.MeshStandardMaterial({ color: '#ffb040', emissive: '#ff8a20', emissiveIntensity: 2.5 }), -4.6, 0, 0, shuttle); flame.rotation.z = Math.PI / 2;
+const astro = figure({ suit: true, skin: '#f0b890' }); space.add(astro);
+const spaceLight = new THREE.DirectionalLight('#ffffff', 2.5); spaceLight.position.set(20, 20, 30); space.add(spaceLight);
+
+// ============================================================
+//  SHOTS: Kamera + Animation je Einstellung
+// ============================================================
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+function cam(from, to, lookFrom, lookTo, k) { camera.position.lerpVectors(from, to, k); const l = new THREE.Vector3().lerpVectors(lookFrom, lookTo, k); camera.lookAt(l); }
+function setTime(night) {
+  scene.background = new THREE.Color(night ? '#1a2a52' : '#9fc4e8');
+  hemi.intensity = night ? 0.75 : 1.1; hemi.color.set(night ? '#9ab4ff' : '#dff0ff'); sun.intensity = night ? 0.9 : 2.2; sun.color.set(night ? '#8aa4ff' : '#fff4e0');
+  yardLamp.intensity = night ? 18 : 0; ohLight.intensity = night ? 6 : 0;
+}
+// Fortschritt des Tunnels (0..1) über die Zeit
+function tunnelProg(t) { return t < T.cellar ? 0 : t < T.depth ? 0.0 : clamp(lerp(0.05, 1, inv(T.depth, T.east, t) ** 0.9)); }
+function shaftProg(t) { return ease(inv(T.cellar + 0.2, T.depth, t)); }
+function updateWorld(t) {
+  // Schächte und Tunnel
+  const sp = Math.max(0.05, t < T.cellar ? 0 : shaftProg(t)), shaftLen = 9.3 * sp;
+  shaftW.scale.set(1, shaftLen, 1); shaftW.position.y = -3 - shaftLen / 2;
+  const tl = (X_EAST - X_WEST) * tunnelProg(t); tunnel.scale.set(Math.max(0.01, tl), 1, 1); tunnel.position.x = X_WEST + tl / 2;
+  const east = ease(inv(T.east - 0.2, T.exit, t)), eLen = 11.4 * east; shaftE.visible = east > 0; shaftE.scale.set(1, Math.max(0.01, eLen), 1); shaftE.position.y = TY + eLen / 2;
+  props.forEach((p, i) => p.visible = (p.position.x - X_WEST) < tl - 0.3);
+  lamps.forEach((l, i) => l.visible = (l.position.x - X_WEST) < tl - 0.3);
+  pile.scale.setScalar(0.3 + 0.9 * tunnelProg(t)); pile.visible = t > T.cellar;
+  tLight.intensity = 7 + Math.sin(t * 7) * 0.8;
+  // Klotür
+  door.rotation.y = -1.6 * ease(inv(T.toilet - 0.1, T.toilet + 0.5, t)) * (t < T.escape + 1 ? 1 : 0.6);
+  guard.rotation.y = Math.sin(t * 0.8) * 0.9;
+}
+function hideActors() { students.forEach(f => f.visible = false); refugees.forEach(f => f.visible = false); popHead.visible = false; sled.visible = false; rope.visible = false; }
+function crawlAt(f, x, ph, sc = 0.62) { f.visible = true; f.scale.setScalar(sc); f.rotation.set(0, 0, -Math.PI / 2); f.position.set(x, TY - 0.28, FRONT + 0.32); pose(f, 'crawl', ph); }
+const SH = {
+  aerial(t, lt, k) { setTime(false); cam(V(-1, 30, 62), V(-2, 10, 40), V(-1, -4, 0), V(-2, 0, 0), ease(k)); },
+  wall(t, lt, k) { setTime(false); cam(V(-6, 4.5, 14), V(-2, 5.5, 12), V(-1, 3, 0), V(1, 4, -1), ease(k)); },
+  bakery(t, lt, k) { setTime(false); cam(V(X_WEST + 3, 3.5, 16), V(X_WEST + 1.5, 3, 13), V(X_WEST, 2.5, 0), V(X_WEST, 2.2, 0), ease(k));
+    students.forEach((f, i) => { f.visible = true; f.rotation.set(0, Math.PI * 0.85, 0); f.scale.setScalar(1); const w = clamp(lt / 1.8); f.position.set(X_WEST + 4 - i * 1.1 - w * 3.5, 0, 3.5 - w * 1.2); pose(f, 'walk', t * 9 + i); }); },
+  cellar(t, lt, k) { setTime(false); cam(V(X_WEST, -1, 14), V(X_WEST, -3, 13), V(X_WEST, -2.5, 0), V(X_WEST, -4, 0), ease(k));
+    const f = students[0]; f.visible = true; f.scale.setScalar(0.8); f.rotation.set(0, 0, 0); f.position.set(X_WEST, -3 - 9.3 * shaftProg(t) + 0.1, FRONT + 0.3); pose(f, 'dig', t * 10);
+    const f2 = students[1]; f2.visible = true; f2.scale.setScalar(0.8); f2.rotation.set(0, 0.4, 0); f2.position.set(X_WEST - 3, -3.1, FRONT + 0.3); pose(f2, 'dig', t * 8 + 1); },
+  depth(t, lt, k) { setTime(false); cam(V(X_WEST + 1, -3, 14), V(X_WEST + 1.5, -11, 13), V(X_WEST, -4, FRONT), V(X_WEST + 1, -12, FRONT), ease(k)); crawlAt(students[0], X_WEST + 1.5, t * 6); },
+  cm70(t, lt, k) { setTime(false); cam(V(X_WEST + 4.6, TY + 0.8, 11.5), V(X_WEST + 4.9, TY + 0.6, 10.4), V(X_WEST + 4.6, TY - 0.1, FRONT), V(X_WEST + 4.9, TY - 0.1, FRONT), ease(k)); crawlAt(students[0], X_WEST + 4, t * 6); },
+  crawl(t, lt, k) { setTime(false); const x = X_WEST + 5 + lt * 0.8; cam(V(x - 0.6, TY + 0.5, 9.4), V(x + 0.6, TY + 0.4, 8.8), V(x + 1.4, TY - 0.1, FRONT), V(x + 1.8, TY - 0.1, FRONT), ease(k)); crawlAt(students[0], x + 0.3, t * 9); },
+  buckets(t, lt, k) { setTime(false); cam(V(X_WEST + 4.5, TY + 1.4, 12), V(X_WEST + 2, TY + 1.6, 12.5), V(X_WEST + 4.5, TY - 0.1, FRONT), V(X_WEST + 2, TY, FRONT), ease(k));
+    sled.visible = true; rope.visible = true; const sx = lerp(X_WEST + 6, X_WEST + 0.6, ease(clamp(lt / 1.6))); sled.position.set(sx, TY, FRONT + 0.3); rope.scale.x = Math.max(0.1, sx - X_WEST); rope.position.x = X_WEST + (sx - X_WEST) / 2; crawlAt(students[1], X_WEST + 8, t * 6); },
+  months(t, lt, k) { setTime(false); cam(V(-1, -4, 52), V(-1, -5, 46), V(-1, -5, 0), V(-1, -6, 0), ease(k)); crawlAt(students[0], X_WEST + (X_EAST - X_WEST) * tunnelProg(t) - 0.8, t * 10); },
+  meters(t, lt, k) { setTime(false); const x = lerp(X_WALL - 4, X_EAST - 2, ease(k)); cam(V(x, TY + 2.2, 15), V(x, TY + 2.2, 15), V(x, TY + 0.6, FRONT), V(x, TY + 0.6, FRONT), 0); crawlAt(students[0], x + 1.5, t * 9); },
+  east(t, lt, k) { setTime(false); cam(V(X_EAST + 1, TY + 1, 12), V(X_EAST + 1, -2, 12), V(X_EAST, TY, 0), V(X_EAST, -1, 0), ease(k)); const f = students[0]; f.visible = true; f.scale.setScalar(0.7); f.rotation.set(0, 0, 0); f.position.set(X_EAST, TY + 11 * ease(k) - 0.4, FRONT + 0.3); pose(f, 'dig', t * 10); },
+  exit(t, lt, k) { setTime(true); cam(V(X_EAST + 2, 2.5, 10), V(X_EAST + 1.2, 2, 8), V(X_EAST, 1, 3), V(X_EAST, 1, 3), ease(k)); },
+  toilet(t, lt, k) { setTime(true); cam(V(X_EAST + 0.4, 1.4, 7.6), V(X_EAST + 0.2, 1.1, 6.4), V(X_EAST, 0.55, 3.0), V(X_EAST, 0.5, 3.0), ease(k));
+    popHead.visible = true; popHead.scale.setScalar(0.55); popHead.rotation.set(0, 0, 0); const up = backOut(clamp((lt - 0.5) / 0.4)); popHead.position.set(X_EAST, -0.9 + up * 0.55, 2.95); pose(popHead, 'cheer', t * 3); },
+  tokio(t, lt, k) { setTime(true); cam(V(X_EAST - 3, 2.2, 11), V(X_EAST - 2.4, 2, 9.5), V(X_EAST - 2, 1.2, 4), V(X_EAST - 2, 1.2, 4), ease(k));
+    refugees.slice(0, 3).forEach((f, i) => { f.visible = true; f.scale.setScalar(0.95 - i * 0.12); f.rotation.set(0, -0.6, 0); f.position.set(X_EAST - 2.2 - i * 0.9, 0, 4 + i * 0.3); pose(f, 'walk', t * 5 + i); }); },
+  escape(t, lt, k) { setTime(false); const x = lerp(X_EAST - 3, X_WALL - 2, ease(k)); cam(V(x + 2, TY + 1.4, 13), V(x, TY + 1.4, 13), V(x + 2, TY, FRONT), V(x, TY, FRONT), ease(k));
+    refugees.forEach((f, i) => crawlAt(f, x + 1 + i * 1.5, t * 8 + i, i === 4 ? 0.45 : 0.6)); refugees.forEach(f => f.rotation.set(0, Math.PI, -Math.PI / 2)); },
+  free(t, lt, k) { setTime(false); cam(V(X_WEST - 1.5, -1.2, 14), V(X_WEST - 1.5, -1.6, 12), V(X_WEST - 1.5, -2.2, FRONT), V(X_WEST - 1.5, -2.2, FRONT), ease(k));
+    refugees.slice(0, 4).forEach((f, i) => { f.visible = true; f.scale.setScalar(0.75); f.rotation.set(0, 0, 0); f.position.set(X_WEST - 4 + i * 1.3, -3.1, FRONT + 0.3); pose(f, 'cheer', t * 4 + i); }); },
+  digger(t, lt, k) { setTime(false); cam(V(X_WEST + 2, 1.8, 6), V(X_WEST + 1.6, 1.8, 4.4), V(X_WEST + 1, 1.5, 2), V(X_WEST + 1, 1.6, 2), ease(k));
+    const f = students[0]; f.visible = true; f.scale.setScalar(1); f.rotation.set(0, 0.3, 0); f.position.set(X_WEST + 1, 0, 2); pose(f, 'stand', 0); f.userData.parts.armR.rotation.z = 2.4 + Math.sin(t * 6) * 0.2; },
+  space(t, lt, k) { cam(V(0, 2, 13), V(0.5, 1, 10), V(1, -0.5, 0), V(1.2, -0.5, 1), ease(k)); shuttle.position.set(lerp(-18, 10, k), 4 + Math.sin(lt) * 0.3, -6); flame.scale.y = 1 + Math.sin(t * 30) * 0.2;
+    astro.position.set(1.5, -1 + Math.sin(t * 1.5) * 0.3, 2); astro.rotation.set(0.3, t * 0.4, 0.4 + Math.sin(t) * 0.2); pose(astro, 'cheer', t * 2); earth.rotation.y = t * 0.05; },
+  end(t, lt, k) { setTime(false); cam(V(-1, 6, 54), V(-1, 8, 62), V(-1, -4, 0), V(-1, -5, 0), ease(k)); crawlAt(refugees[0], lerp(X_EAST - 1, X_WEST + 1, (lt * 0.25) % 1), t * 8); },
+};
+const SPACE_SHOTS = ['space'];
+
+// ---------- 2D-Ebene: Untertitel-Schilder + REAL ----------
+function pillText(text, x, y, size, bg = '#ffd43b', fg = '#141414', k = 1) {
+  octx.font = `800 ${size}px Poppins`; const tw = octx.measureText(text).width, w = tw + size * 1.1, h = size * 1.5;
+  octx.save(); octx.translate(x, y); octx.scale(0.7 + 0.3 * k, 0.7 + 0.3 * k); octx.globalAlpha = clamp(k * 1.5);
+  octx.shadowColor = 'rgba(0,0,0,0.35)'; octx.shadowBlur = 24; octx.shadowOffsetY = 8;
+  octx.fillStyle = bg; octx.beginPath(); octx.roundRect(-w / 2, -h / 2, w, h, size * 0.38); octx.fill(); octx.restore();
+  octx.save(); octx.translate(x, y); octx.scale(0.7 + 0.3 * k, 0.7 + 0.3 * k); octx.globalAlpha = clamp(k * 1.5); octx.fillStyle = fg; octx.textAlign = 'center'; octx.textBaseline = 'middle'; octx.fillText(text, 0, size * 0.07); octx.restore();
+}
+const TOPCAP = ['cm70', 'crawl', 'meters', 'escape', 'toilet'];
+function drawCaption(t, shot) {
+  for (const [t0, t1, words] of CAPTIONS) {
+    if (t < t0 || t >= t1) continue;
+    const k = backOut(clamp((t - t0) / 0.14)); const hi = words.some(w => w.includes('*'));
+    let txt = words.map(w => w.replace(/\*/g, '')).join(' ');
+    octx.font = '800 84px Poppins'; let size = 84; while (octx.measureText(txt).width > 860 && size > 50) { size -= 4; octx.font = `800 ${size}px Poppins`; }
+    pillText(txt, 540, TOPCAP.includes(shot) ? 430 : 1430, size, hi ? '#ff4d3d' : '#ffd43b', hi ? '#ffffff' : '#141414', k);
+  }
+}
+function drawReal(t) {
+  for (const [a, b, txt] of REAL) {
+    if (t < a || t > b) continue;
+    const k = clamp((t - a) / 0.3) * (1 - clamp((t - (b - 0.2)) / 0.2));
+    octx.save(); octx.globalAlpha = k; octx.font = '800 32px Poppins'; const tw = octx.measureText(txt).width, w = tw + 150, x = 40, y = 190;
+    octx.fillStyle = 'rgba(250,248,240,0.96)'; octx.beginPath(); octx.roundRect(x, y, w, 64, 32); octx.fill();
+    octx.fillStyle = '#1f8f4e'; octx.beginPath(); octx.roundRect(x + 10, y + 10, 96, 44, 22); octx.fill();
+    octx.fillStyle = '#fff'; octx.font = '800 24px Poppins'; octx.textAlign = 'center'; octx.textBaseline = 'middle'; octx.fillText('REAL', x + 58, y + 33);
+    octx.fillStyle = '#1a1a1a'; octx.font = '800 32px Poppins'; octx.textAlign = 'left'; octx.fillText(txt, x + 124, y + 34); octx.restore();
+  }
+}
+// große Info-Schilder im Bild (Zahlen, Codewort …)
+function drawBig(t, shot, lt) {
+  const big = { depth: ['12 METER', 1.2], cm70: ['70 CM', 0.3], months: [['APRIL', 'MAI', 'JUNI', 'JULI', 'AUGUST', 'SEPTEMBER'][Math.min(5, Math.floor(lt / 0.23))], 0.1],
+    meters: [Math.round(lerp(40, 145, ease(clamp(lt / 1.7)))) + ' M', 0.1], tokio: ['„TOKIO"', 0.6], free: ['57 MENSCHEN', 0.8], east: ['OSTEN ↑', 0.1] }[shot];
+  if (!big) return; const k = backOut(clamp((lt - big[1]) / 0.3)); if (k <= 0) return;
+  pillText(big[0], 540, shot === 'cm70' || shot === 'meters' ? 820 : 760, 110, '#ffffff', '#141414', k);
+}
+
+// ---------- main ----------
+function renderFrame(t) {
+  const shot = shotOf(t), lt = t - T[shot], len = nextT(shot) - T[shot], k = clamp(lt / len);
+  const inSpace = SPACE_SHOTS.includes(shot);
+  world.visible = !inSpace; space.visible = inSpace;
+  if (inSpace) { scene.background = new THREE.Color('#05060f'); hemi.intensity = 0.4; sun.intensity = 0.3; }
+  hideActors(); updateWorld(t); SH[shot](t, lt, k);
+  renderer.render(scene, camera);
+  octx.setTransform(1, 0, 0, 1, 0, 0); octx.drawImage(renderer.domElement, 0, 0);
+  if (lt < 0.1 && shot !== 'aerial') { octx.fillStyle = `rgba(255,255,255,${0.5 * (1 - lt / 0.1)})`; octx.fillRect(0, 0, W, H); }
+  if (t < 0.3) { octx.fillStyle = `rgba(0,0,0,${1 - t / 0.3})`; octx.fillRect(0, 0, W, H); }
+  drawReal(t); drawBig(t, shot, lt);
+  if (shot === 'end') { const k1 = backOut(clamp((lt - 0.2) / 0.4)); if (k1 > 0) { pillText('HÄTTET IHR', 540, 640, 110, '#ffd43b', '#141414', k1); pillText('EUCH GETRAUT?', 540, 820, 110, '#ff4d3d', '#ffffff', k1); }
+    const k2 = clamp((lt - 1.4) / 0.4); if (k2 > 0) pillText('Schreibt es in die Kommentare', 540, 1430, 54, '#ffffff', '#141414', k2); }
+  else drawCaption(t, shot);
+}
+window.renderFrame = renderFrame;
+document.fonts.load('800 100px Poppins').then(() => { window.READY = true; });
+</script>
+<script src="captions.js"></script>
+</body></html>

@@ -2,7 +2,16 @@
 
 Format: TikTok 1080×1920, 30 fps, **30–40 s**, Deutsch. Ordner pro Folge: `tiktok/<slug>/`.
 
-## AKTUELLES FORMAT: Story (Vorlage: `pompeji/`) – Wunsch des Nutzers nach Vorbild-Video
+## NEU: 3D-Querschnitt-Stil (Vorlage: `tunnel57/`) – Wunsch des Nutzers nach Vorbild-Bild
+- three.js (`lib/three.min.js`, klassisches Script – ES-Module gehen über file:// nicht), offscreen rendern, auf #c kopieren, 2D-Texte darüber.
+- Low-Poly-Spielzeug-Look: Icosaeder-Bäume (flatShading), Boxen-Häuser, Bodenquerschnitt mit Canvas-Texturen (Gras/Erde/Steine/Fels/Knochen/Fossil),
+  Figuren `figure()` mit Gesicht + Gliedern, `pose()` walk/crawl/dig/cheer. Kamera je Einstellung `cam(from,to,lookFrom,lookTo,k)` –
+  **Kamera immer vor der Querschnitt-Fläche (z > FRONT)**, sonst sieht man nur Himmel.
+- Untertitel als gelbe abgerundete Schilder (Poppins 800, schwarz), Schlüsselwörter rotes Schild/weiße Schrift; große weiße Zahlen-Schilder.
+- Rendern ca. 1 Bild/0,3–0,5 s (Software-WebGL) → im Hintergrund mit langem Timeout starten.
+- Passt besonders zu Themen mit „unter der Erde / innen drin" (Tunnel, Höhlen, Bergwerke, Bunker, Pyramiden-Innere, Körper).
+
+## Story-Format (Vorlage: `pompeji/`) – Wunsch des Nutzers nach Vorbild-Video
 - **Kleine Geschichte mit 1–2 erfundenen Figuren** (Name! z.B. Bäcker Marcus + Hund Felix) in einer **echten** Situation/Epoche.
   Präsens, kurze Sätze, Spannung, Gefühl; Ende = **Cliffhanger** („Schaffen es die beiden?" + „Teil 2 folgt").
 - **Grafik:** flache Vektor-Illustration mit detailreichen Kulissen; Figuren mit runden Köpfen, großen Augen, Augenbrauen-Mimik

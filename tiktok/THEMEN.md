@@ -7,7 +7,7 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Story: Pompeji – Marcus und Felix → `pompeji/` (Teil 2 kann folgen)
 - [x] Story: Ballonflucht 1979 – Teil 1: Der erste Versuch → `ballonflucht/`
 - [ ] Story: Ballonflucht 1979 – Teil 2: Die Flucht gelingt (16.9.1979, 8 Personen, Landung bei Naila)
-- [ ] Story: Tunnel 57 – Flucht unter der Berliner Mauer (1964, 57 Menschen)
+- [x] 3D-Story: Tunnel 57 – Flucht unter der Berliner Mauer → `tunnel57/`
 - [ ] Story: Der Hauptmann von Köpenick (1906)
 - [ ] Story: Mars Climate Orbiter – Zoll statt Meter (1999)
 - [ ] Story: Der Mann, der zwei Atombomben überlebte (Tsutomu Yamaguchi)
