@@ -1,6 +1,6 @@
 # 3D-Querschnitt-Story: „Tunnel 57" (Berlin 1964)
 
-**Video:** `tunnel57_final.mp4` – 36,4 s, 1080×1920, 30 fps. Erzähler vorerst Ersatzstimme; Brian-Fassung nach Upload.
+**Video:** `tunnel57_final.mp4` – 37,2 s, 1080×1920, 30 fps. Erzähler: ElevenLabs „James – Husky, Engaging and Bold" (`sprecher_james.mp3`), Pausen gekürzt, alle Einstellungen auf seine Sätze gelegt.
 **Stil:** echtes 3D mit three.js (`tiktok/lib/three.min.js`) im Spielzeug-/Low-Poly-Look nach Vorbild-Bild des Nutzers:
 Bodenquerschnitt mit Erdschichten, Figuren mit Gesicht und animierten Gliedern, weiches Licht/Schatten, gelbe Untertitel-Schilder (Poppins 800), REAL-Schild.
 

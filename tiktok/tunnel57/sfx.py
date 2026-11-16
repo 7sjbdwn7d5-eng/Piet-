@@ -3,8 +3,7 @@ import sys, os, numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 from sfxlib import *
 from sfxlib import T as T_
-T = dict(aerial=0, wall=2.3, bakery=4.6, cellar=6.6, depth=8.85, cm70=10.2, crawl=12.0, buckets=13.68, months=15.68, meters=17.07,
-         east=18.92, exit=19.62, toilet=20.62, tokio=22.65, escape=24.05, free=26.3, digger=28.27, space=30.0, end=32.31, out=36.4)
+T = dict(aerial=0, wall=2.61, bakery=4.91, cellar=7.61, depth=9.8, cm70=11.36, crawl=13.19, buckets=15.06, months=17.4, meters=18.59, east=20.52, exit=21.33, toilet=22.23, tokio=24.18, escape=26.1, free=28.3, digger=29.96, space=31.86, end=33.51, out=37.18)
 tr = Track(T['out'])
 
 

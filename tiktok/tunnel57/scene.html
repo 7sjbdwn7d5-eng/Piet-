@@ -23,8 +23,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(30, W / H, 0.5, 600);
 
 // ---------- Zeitplan (Video-Sekunden) ----------
-const T = { aerial: 0, wall: 2.3, bakery: 4.6, cellar: 6.6, depth: 8.85, cm70: 10.2, crawl: 12.0, buckets: 13.68, months: 15.68, meters: 17.07,
-  east: 18.92, exit: 19.62, toilet: 20.62, tokio: 22.65, escape: 24.05, free: 26.3, digger: 28.27, space: 30.0, end: 32.31, out: 36.4 };
+const T = { aerial: 0, wall: 2.61, bakery: 4.91, cellar: 7.61, depth: 9.8, cm70: 11.36, crawl: 13.19, buckets: 15.06, months: 17.4, meters: 18.59, east: 20.52, exit: 21.33, toilet: 22.23, tokio: 24.18, escape: 26.1, free: 28.3, digger: 29.96, space: 31.86, end: 33.51, out: 37.18 };   // getimt auf James (sprecher_james.mp3)
 window.DURATION = T.out;
 const SHOTS = Object.keys(T).filter(k => k !== 'out');
 const REAL = [
@@ -295,7 +294,7 @@ function drawReal(t) {
 // große Info-Schilder im Bild (Zahlen, Codewort …)
 function drawBig(t, shot, lt) {
   const big = { depth: ['12 METER', 1.2], cm70: ['70 CM', 0.3], months: [['APRIL', 'MAI', 'JUNI', 'JULI', 'AUGUST', 'SEPTEMBER'][Math.min(5, Math.floor(lt / 0.23))], 0.1],
-    meters: [Math.round(lerp(40, 145, ease(clamp(lt / 1.7)))) + ' M', 0.1], tokio: ['„TOKIO"', 0.6], free: ['57 MENSCHEN', 0.8], east: ['OSTEN ↑', 0.1] }[shot];
+    meters: [Math.round(lerp(40, 145, ease(clamp(lt / 1.7)))) + ' M', 0.1], tokio: ['„TOKIO"', 1.16], free: ['57 MENSCHEN', 0.8], east: ['OSTEN ↑', 0.1] }[shot];
   if (!big) return; const k = backOut(clamp((lt - big[1]) / 0.3)); if (k <= 0) return;
   pillText(big[0], 540, shot === 'cm70' || shot === 'meters' ? 820 : 760, 110, '#ffffff', '#141414', k);
 }
