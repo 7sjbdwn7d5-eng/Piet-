@@ -17,16 +17,16 @@ const ctx = document.getElementById('c').getContext('2d');
 const FONT = '"Inter", "Inter Display", sans-serif';
 
 // Szenen-Schnitte (Video-Zeit), getimt auf den Sprechertext (lines.json)
-const B = [0, 3.95, 11.58, 18.35, 25.4, 31.85, 37.5];
+const B = [0, 4.1, 12.11, 19.35, 26.19, 32.36, 37.47];   // getimt auf Brian (sprecher_brian.mp3)
 const S = { hook: [B[0], B[1]], s5: [B[1], B[2]], s8: [B[2], B[3]], s12: [B[3], B[4]], s17: [B[4], B[5]], outro: [B[5], B[6]] };
 // Einstellungen innerhalb der Szenen
-const AGO = 1.8;                    // "Vor viereinhalbtausend Jahren"
-const NOSLAVE = 6.45, TEAMS = 9.25; // "Keine Sklaven" / "in Teams wie: Freunde des Cheops"
-const CARS = 13.65;                 // "so schwer wie zwei Autos"
-const SLED = 15.15, WATER = 16.1, GLIDE = 17.1;   // "Der Trick" / "Wasser auf den Sand" / "dann gleitet der Schlitten"
-const BREAD = 19.5, ONION = 20.25, BEER = 21.0;   // Brot, Zwiebeln, Bier
-const LITER = 21.4, WAGE = 24.0;    // "Mehrere Liter am Tag" / "Teil des Lohns"
-const TOMB = 28.55;                 // "Und wer starb, bekam ein Grab neben der Pyramide"
+const AGO = 2.12;                    // "Vor viereinhalbtausend Jahren"
+const NOSLAVE = 6.72, TEAMS = 9.44; // "Keine Sklaven" / "in Teams wie: Freunde des Cheops"
+const CARS = 14.85;                 // "so schwer wie zwei Autos"
+const SLED = 15.97, WATER = 16.68, GLIDE = 17.93;   // "Der Trick" / "Wasser auf den Sand" / "dann gleitet der Schlitten"
+const BREAD = 20.36, ONION = 21.02, BEER = 21.77;   // Brot, Zwiebeln, Bier
+const LITER = 22.37, WAGE = 25.11;    // "Mehrere Liter am Tag" / "Teil des Lohns"
+const TOMB = 29.41;                 // "Und wer starb, bekam ein Grab neben der Pyramide"
 const WIPES = [NOSLAVE, TEAMS, SLED, LITER, WAGE, TOMB];
 window.DURATION = B[6];
 

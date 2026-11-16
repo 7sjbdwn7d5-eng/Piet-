@@ -2,10 +2,10 @@
 import sys, os, numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 from sfxlib import *
-B = [0, 3.95, 11.58, 18.35, 25.4, 31.85, 37.5]
-AGO, NOSLAVE, TEAMS, CARS = 1.8, 6.45, 9.25, 13.65
-SLED, WATER, GLIDE = 15.15, 16.1, 17.1
-BREAD, ONION, BEER, LITER, WAGE, TOMB = 19.5, 20.25, 21.0, 21.4, 24.0, 28.55
+B = [0, 4.1, 12.11, 19.35, 26.19, 32.36, 37.47]
+AGO, NOSLAVE, TEAMS, CARS = 2.12, 6.72, 9.44, 14.85
+SLED, WATER, GLIDE = 15.97, 16.68, 17.93
+BREAD, ONION, BEER, LITER, WAGE, TOMB = 20.36, 21.02, 21.77, 22.37, 25.11, 29.41
 WIPES = [NOSLAVE, TEAMS, SLED, LITER, WAGE, TOMB]
 tr = Track(B[-1])
 def drum(t0, g=0.6, low=1.0):

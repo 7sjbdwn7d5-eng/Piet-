@@ -1,6 +1,6 @@
 # „Ein Tag als Pyramidenbauer"
 
-**Video:** `pyramidenbauer_final.mp4` – 37,5 s, 1080×1920, 30 fps. Erzähler vorerst Ersatzstimme; Brian-Fassung nach Upload.
+**Video:** `pyramidenbauer_final.mp4` – 37,5 s, 1080×1920, 30 fps. Erzähler: ElevenLabs Brian (`sprecher_brian.mp3`), Pausen gekürzt mit `tools/fit_voice.py`, alle Bildwechsel auf seine Sätze gelegt.
 
 | Zeit | Szene | Einstellungen |
 |---|---|---|
