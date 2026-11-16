@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>3D-Querschnitt-Stil</title>
+<style>@font-face{font-family:'Poppins';font-weight:800;src:url('../fonts/poppins-latin-800-normal.woff2') format('woff2')} html,body{margin:0;background:#000} canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="../lib/three.min.js"></script>
+<script>
+// ============================================================
+//  3D-Querschnitt-Stil (Spielzeug-/Knet-Look, Low-Poly) – Probe: Tunnel 57
+//  three.js rendert offscreen, das Bild wird auf #c kopiert, Untertitel kommen darüber.
+// ============================================================
+const W = 1080, H = 1920;
+const out = document.getElementById('c'), octx = out.getContext('2d');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H, false); renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#9fc4e8');
+const camera = new THREE.PerspectiveCamera(24, W / H, 1, 400);
+
+// ---------- Licht ----------
+scene.add(new THREE.HemisphereLight('#dff0ff', '#6a5a40', 1.1));
+const sun = new THREE.DirectionalLight('#fff4e0', 2.2); sun.position.set(-18, 30, 25); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -25, right: 25, top: 25, bottom: -25, near: 1, far: 100 }); sun.shadow.radius = 4;
+scene.add(sun);
+
+// ---------- Hilfen ----------
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, metalness: 0, ...o });
+function mesh(geo, m, x = 0, y = 0, z = 0, parent = scene) { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; }
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+
+// ---------- Boden-Querschnitt (Vorderseite mit Erdschichten) ----------
+const GW = 17, GD = 10;   // Breite, Tiefe der Bodenplatte
+const layers = [   // [Dicke, Farbe, Textur]
+  [0.35, '#5fae47', 'grass'], [1.2, '#4a3424', 'dark'], [5.0, '#8a5a36', 'soil'], [7.0, '#8a8f98', 'rock'],
+];
+let yTop = 0;
+const r = rng(57);
+for (const [th, col, kind] of layers) {
+  const tex = canvasTex(1024, Math.max(64, Math.round(1024 * th / GW)), (g, w, h) => {
+    g.fillStyle = col; g.fillRect(0, 0, w, h);
+    if (kind === 'soil' || kind === 'dark') { for (let i = 0; i < 2600; i++) { g.fillStyle = `rgba(${kind === 'dark' ? '30,20,14' : '110,70,40'},${0.25 + r() * 0.35})`; g.beginPath(); g.arc(r() * w, r() * h, 2 + r() * 6, 0, 7); g.fill(); } }
+    if (kind === 'soil') { for (let i = 0; i < 40; i++) { g.fillStyle = '#c9c4bc'; g.beginPath(); g.ellipse(r() * w, r() * h, 5 + r() * 7, 4 + r() * 5, 0, 0, 7); g.fill(); } }
+    if (kind === 'rock') { for (let i = 0; i < 160; i++) { const v = 120 + r() * 50; g.fillStyle = `rgba(${v},${v + 4},${v + 12},0.35)`; g.beginPath(); g.arc(r() * w, r() * h, 10 + r() * 30, 0, 7); g.fill(); }
+      g.strokeStyle = 'rgba(50,52,60,0.55)'; g.lineWidth = 2; for (let i = 0; i < 8; i++) { let x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (r() - 0.5) * 70; y += 10 + r() * 30; g.lineTo(x, y); } g.stroke(); }
+    // Fossil
+    g.strokeStyle = 'rgba(235,230,220,0.9)'; g.lineWidth = 5; g.beginPath(); g.moveTo(60, h * 0.6); g.lineTo(170, h * 0.6); for (let k = 0; k < 5; k++) { g.moveTo(80 + k * 18, h * 0.6 - 18); g.lineTo(86 + k * 18, h * 0.6 + 18); } g.moveTo(170, h * 0.6); g.lineTo(200, h * 0.6 - 20); g.lineTo(200, h * 0.6 + 20); g.closePath(); g.stroke(); }
+  });
+  const sideM = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 });
+  const topM = mat(kind === 'grass' ? '#5fae47' : col);
+  const box = mesh(new THREE.BoxGeometry(GW, th, GD), [sideM, sideM, topM, topM, sideM, sideM], 0, yTop - th / 2, 0);
+  yTop -= th;
+}
+// ---------- Tunnel im Querschnitt ----------
+const TY = -6.0;   // Tunnelhöhe (Mitte)
+const tunnelTex = canvasTex(1024, 128, (g, w, h) => { g.fillStyle = '#3a2416'; g.fillRect(0, 0, w, h); for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(20,10,5,${r() * 0.5})`; g.fillRect(r() * w, r() * h, 3 + r() * 8, 2 + r() * 5); } });
+mesh(new THREE.BoxGeometry(12.2, 1.1, 0.2), new THREE.MeshStandardMaterial({ map: tunnelTex, roughness: 1 }), 0.4, TY, GD / 2 + 0.01);
+for (let i = 0; i < 6; i++) { mesh(new THREE.BoxGeometry(0.16, 1.1, 0.3), mat('#9a7448'), -5.2 + i * 2.2, TY, GD / 2 + 0.08); mesh(new THREE.BoxGeometry(0.8, 0.12, 0.3), mat('#9a7448'), -5.2 + i * 2.2, TY + 0.55, GD / 2 + 0.08); }
+// Schächte links (Westen) und rechts (Osten)
+mesh(new THREE.BoxGeometry(1.0, 6.2, 0.2), new THREE.MeshStandardMaterial({ map: tunnelTex }), -5.6, -3.0, GD / 2 + 0.01);
+mesh(new THREE.BoxGeometry(1.0, 6.2, 0.2), new THREE.MeshStandardMaterial({ map: tunnelTex }), 6.4, -3.0, GD / 2 + 0.01);
+// Lampe im Tunnel
+const lamp = new THREE.PointLight('#ffcc80', 6, 6, 1.6); lamp.position.set(-1, TY + 0.3, GD / 2 + 0.6); scene.add(lamp);
+mesh(new THREE.SphereGeometry(0.12, 12, 8), new THREE.MeshStandardMaterial({ color: '#ffe0a0', emissive: '#ffcc66', emissiveIntensity: 2 }), -1, TY + 0.4, GD / 2 + 0.2);
+
+// ---------- Figur (Knet-Look) ----------
+function figure(o = {}) {
+  const g = new THREE.Group();
+  const skin = mat(o.skin || '#f0b890', { roughness: 0.6 }), shirt = mat(o.shirt || '#3a6ab0', { roughness: 0.7 }), pants = mat(o.pants || '#2a3348');
+  mesh(new THREE.CapsuleGeometry(0.32, 0.5, 6, 12), shirt, 0, 0.95, 0, g);
+  mesh(new THREE.SphereGeometry(0.33, 20, 14), skin, 0, 1.68, 0, g);
+  mesh(new THREE.SphereGeometry(0.34, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2.2), mat(o.hair || '#4a2c1a'), 0, 1.72, 0, g);
+  for (const s of [-1, 1]) { mesh(new THREE.SphereGeometry(0.06, 10, 8), mat('#1a1410', { roughness: 0.3 }), s * 0.12, 1.7, 0.29, g); mesh(new THREE.CapsuleGeometry(0.1, 0.5, 4, 8), shirt, s * 0.42, 1.0, 0, g).rotation.z = s * 0.25; mesh(new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), pants, s * 0.15, 0.3, 0, g); }
+  if (o.helmet) mesh(new THREE.SphereGeometry(0.36, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.4), mat('#e0b040', { roughness: 0.4 }), 0, 1.78, 0, g);
+  return g;
+}
+// Fluchthelfer liegt im Tunnel und gräbt
+const digger = figure({ shirt: '#c84a30', helmet: true }); digger.rotation.z = -Math.PI / 2; digger.position.set(2.6, TY - 0.28, GD / 2 + 0.3); digger.scale.setScalar(0.66); scene.add(digger);
+mesh(new THREE.BoxGeometry(0.7, 0.08, 0.08), mat('#8a6a40'), 3.9, TY - 0.1, GD / 2 + 0.35);   // Spaten
+// Eimer mit Erde
+mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.4, 14), mat('#9aa0a8', { metalness: 0.4, roughness: 0.4 }), 0.6, TY - 0.33, GD / 2 + 0.3);
+
+// ---------- Oberfläche: Mauer, Wachturm, Häuser, Bäume ----------
+// Berliner Mauer (Segmente mit rundem Abschluss)
+for (let i = 0; i < 4; i++) { const z = -3.6 + i * 2.4; mesh(new THREE.BoxGeometry(0.35, 3.6, 2.3), mat('#cfd0cc'), 0.2, 1.8, z); const pipe = mesh(new THREE.CylinderGeometry(0.32, 0.32, 2.3, 16), mat('#d8d9d6'), 0.2, 3.7, z); pipe.rotation.x = Math.PI / 2; }
+// Todesstreifen (Sand) + Hinterlandmauer
+mesh(new THREE.BoxGeometry(4, 0.06, GD), mat('#d9c49a'), 2.4, 0.03, 0);
+// Wachturm
+mesh(new THREE.CylinderGeometry(0.55, 0.65, 6, 10), mat('#c8c8c2'), 3.2, 3, -2.5);
+mesh(new THREE.CylinderGeometry(1.2, 1.0, 1.3, 8), mat('#b8b8b2'), 3.2, 6.6, -2.5);
+mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.6, 8), mat('#2a3a48', { roughness: 0.2, metalness: 0.3 }), 3.2, 6.65, -2.5);
+mesh(new THREE.CylinderGeometry(1.35, 1.35, 0.18, 8), mat('#8a8a84'), 3.2, 7.35, -2.5);
+// Haus Westen (ehemalige Bäckerei) links
+function house(x, z, w, h, d, wall, roofC) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+  mesh(new THREE.BoxGeometry(w, h, d), mat(wall), 0, h / 2, 0, g);
+  const roof = mesh(new THREE.CylinderGeometry(0.01, w * 0.78, 2.2, 4, 1), mat(roofC, { flatShading: true }), 0, h + 1.1, 0, g); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, d / w);
+  for (const wx of [-w * 0.25, w * 0.25]) mesh(new THREE.BoxGeometry(w * 0.22, h * 0.25, 0.05), mat('#22324a', { roughness: 0.2 }), wx, h * 0.62, d / 2 + 0.03, g);
+  mesh(new THREE.BoxGeometry(w * 0.2, h * 0.38, 0.05), mat('#6a4a30'), 0, h * 0.19, d / 2 + 0.03, g);
+  return g;
+}
+house(-5.2, -2, 4.6, 4.4, 4, '#f2ede4', '#c8553a');
+house(6.8, -3, 3.6, 3.6, 3, '#d8c8a8', '#8a6a5a');
+// Klohäuschen im Osten (Tunnelende)
+mesh(new THREE.BoxGeometry(1.1, 1.9, 1.1), mat('#8a6a42'), 6.4, 0.95, 3.2);
+mesh(new THREE.BoxGeometry(1.3, 0.15, 1.3), mat('#6a4a2a'), 6.4, 2.0, 3.2);
+// Low-Poly-Bäume
+function tree(x, z, s) { mesh(new THREE.CylinderGeometry(0.22 * s, 0.3 * s, 2 * s, 7), mat('#7a5232'), x, s, z); const c = mat('#4f9a3a', { flatShading: true, roughness: 0.9 }); mesh(new THREE.IcosahedronGeometry(1.5 * s, 0), c, x, 2.6 * s, z); mesh(new THREE.IcosahedronGeometry(1.1 * s, 0), c, x + 0.9 * s, 3.3 * s, z + 0.3); }
+tree(-7.4, 2, 0.9); tree(-2.2, -3.5, 1.15); tree(7.6, 1.5, 0.8);
+// Laterne + Zaun
+for (let i = 0; i < 9; i++) mesh(new THREE.BoxGeometry(0.12, 0.9, 0.06), mat('#ffffff'), -8 + i * 0.36, 0.45, 4.4);
+// Wäscheleine (wie im Vorbild)
+for (const [x, c] of [[-4.3, '#e8432c'], [-3.6, '#ffffff'], [-2.9, '#2e6fd8'], [-2.2, '#f2c531']]) mesh(new THREE.BoxGeometry(0.55, 0.75, 0.03), mat(c), x, 2.3, 1.5);
+mesh(new THREE.BoxGeometry(3.2, 0.03, 0.03), mat('#aaaaaa'), -3.25, 2.7, 1.5);
+
+// ---------- Kamera ----------
+camera.fov = 30; camera.updateProjectionMatrix(); camera.position.set(1.5, 9, 40); camera.lookAt(0.6, -2.6, 0);
+
+// ---------- Untertitel-Schild (gelb, wie Vorbild) ----------
+function pill(text, x, y) {
+  octx.font = '800 92px Poppins'; const tw = octx.measureText(text).width, w = tw + 110, h = 140;
+  octx.save(); octx.shadowColor = 'rgba(0,0,0,0.35)'; octx.shadowBlur = 24; octx.shadowOffsetY = 8;
+  octx.fillStyle = '#ffd43b'; octx.beginPath(); octx.roundRect(x - w / 2, y - h / 2, w, h, 36); octx.fill(); octx.restore();
+  octx.fillStyle = '#141414'; octx.textAlign = 'center'; octx.textBaseline = 'middle'; octx.fillText(text, x, y + 6);
+}
+function renderFrame(t) {
+  lamp.intensity = 6 + Math.sin(t * 7) * 0.8;
+  renderer.render(scene, camera);
+  octx.drawImage(renderer.domElement, 0, 0);
+  pill('TUNNEL 57', 540, 1560);
+}
+window.renderFrame = renderFrame; window.DURATION = 3;
+document.fonts.load('800 100px Poppins').then(() => { renderFrame(0); window.READY = true; });
+</script></body></html>
