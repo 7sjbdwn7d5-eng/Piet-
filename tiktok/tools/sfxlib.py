@@ -93,3 +93,23 @@ def underwater(tr, t0, t1, g=0.4):
     d = t1 - t0; s = filt(noise(d), hi=350) * 2 + 0.3 * np.sin(2 * np.pi * 48 * T(d))
     tr.add(t0, fade(stereo(s, 0.05), 0.4, 0.4), g)
 def lerp(a, b, k): return a + (b - a) * min(1, max(0, k))
+
+# --- echte Geräusche aus der Bibliothek (tiktok/sounds) ---
+import os as _os, json as _json, subprocess as _sp
+_SND = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', 'sounds')
+def sounds():
+    """Alle verfügbaren Geräusche (Name -> Eintrag aus sounds/index.json)."""
+    p = _os.path.join(_SND, 'index.json')
+    return _json.load(open(p)) if _os.path.exists(p) else {}
+def has_sample(name): return name in sounds()
+def sample(name, max_len=None):
+    """Lädt ein Bibliotheks-Geräusch als Stereo-Array (44,1 kHz)."""
+    f = _os.path.join(_SND, sounds()[name]['datei'])
+    raw = _sp.run(["ffmpeg", "-loglevel", "error", "-i", f, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"], capture_output=True, check=True).stdout
+    a = np.frombuffer(raw, np.float32).reshape(-1, 2).astype(np.float64)
+    if max_len: a = fade(a[:int(max_len * SR)], 0.0, 0.05)
+    return a
+def snd(tr, t0, name, g=0.5, fallback=None, max_len=None):
+    """Spielt ein echtes Geräusch, falls vorhanden – sonst die synthetische Ersatz-Funktion (fallback)."""
+    if has_sample(name): tr.add(t0, sample(name, max_len), g)
+    elif fallback: fallback()
