@@ -2,6 +2,7 @@
 **Aktuelles Format (Wunsch des Nutzers): STORY** – kleine Geschichte mit erfundenen Figuren in einer echten Situation, REAL-Fakten, Cliffhanger (Vorlage `pompeji/`).
 Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einfach unten anhängen.
 
+- [x] Was wäre, wenn niemand mehr lügen könnte? → luegen/
 - [x] Ein Tag als Gladiator im alten Rom → `gladiator/`
 - [x] Ein Tag als Pyramidenbauer → `pyramidenbauer/`
 - [x] Story: Pompeji – Marcus und Felix → `pompeji/` (Teil 2 kann folgen)
