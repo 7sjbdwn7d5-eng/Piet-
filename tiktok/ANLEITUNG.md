@@ -2,7 +2,15 @@
 
 Format: TikTok 1080×1920, 30 fps, **30–40 s**, Deutsch. Ordner pro Folge: `tiktok/<slug>/`.
 
-## NEU: 3D-Querschnitt-Stil (Vorlage: `tunnel57/`) – Wunsch des Nutzers nach Vorbild-Bild
+## NEU: Gleichnis-Format (Vorlage: `elefant/`) – nach Vorbild-Video des Nutzers („Flöhe im Glas")
+- Teil 1: Geschichte/Experiment im **dunklen warmen Raum mit Hängelampe** (Lichtkegel, Holzboden), einfache detaillierte Objekte/Tiere,
+  rote gestrichelte „Grenze", Zähler oben links (kleines Label + große Zahl, Farbe blau → pink → rot).
+- Teil 2 (ab „…, denkst du?"): **schwarzer Hintergrund, weiße Strichmännchen**, Sprechblasen, **gelbe Helfer-Figur**; Bezug zum Leben des Zuschauers.
+- Text: **EIN Wort** groß (Inter 900, wichtige Wörter rot): `captions.py lines.json voice.wav captions.js 1`.
+- Ruhiger Sprecher (`voice.py --speed 1.05`), leise Musik, wenige leise Geräusche. Echtes Experiment oder Gleichnis klar kennzeichnen.
+- Ende: Frage an den Zuschauer, Wort für Wort.
+
+## 3D-Querschnitt-Stil (Vorlage: `tunnel57/`) – Wunsch des Nutzers nach Vorbild-Bild
 - three.js (`lib/three.min.js`, klassisches Script – ES-Module gehen über file:// nicht), offscreen rendern, auf #c kopieren, 2D-Texte darüber.
 - Low-Poly-Spielzeug-Look: Icosaeder-Bäume (flatShading), Boxen-Häuser, Bodenquerschnitt mit Canvas-Texturen (Gras/Erde/Steine/Fels/Knochen/Fossil),
   Figuren `figure()` mit Gesicht + Gliedern, `pose()` walk/crawl/dig/cheer. Kamera je Einstellung `cam(from,to,lookFrom,lookTo,k)` –

@@ -8,6 +8,8 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Story: Ballonflucht 1979 – Teil 1: Der erste Versuch → `ballonflucht/`
 - [x] Story: Ballonflucht 1979 – Teil 2: Die Flucht gelingt → `ballonflucht2/`
 - [x] 3D-Story: Tunnel 57 – Flucht unter der Berliner Mauer → `tunnel57/`
+- [x] Gleichnis: Der Elefant und das dünne Seil → `elefant/`
+- [ ] Gleichnis/Experiment: Der Zuschauer-Effekt (Latané & Darley 1968, Raum voller Rauch)
 - [ ] Story: Der Hauptmann von Köpenick (1906)
 - [ ] Story: Mars Climate Orbiter – Zoll statt Meter (1999)
 - [ ] Story: Der Mann, der zwei Atombomben überlebte (Tsutomu Yamaguchi)

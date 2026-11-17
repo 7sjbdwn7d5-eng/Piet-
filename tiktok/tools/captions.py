@@ -1,8 +1,9 @@
 # Erzeugt 2–3-Wort-Untertitel (captions.js) aus Sprechertext + fertiger Sprachspur.
 # lines.json: [[start_s, "TTS-Text", "UNTERTITEL MIT *ROT* MARKIERTEN WÖRTERN", "bottom"|"top"], ...]
-# Usage: python3 captions.py lines.json voice.wav captions.js
+# Usage: python3 captions.py lines.json voice.wav captions.js [max_woerter]
 import json, re, subprocess, sys
 lines = json.load(open(sys.argv[1])); wav = sys.argv[2]; out = sys.argv[3]
+MAXW = int(sys.argv[4]) if len(sys.argv) > 4 else 3   # max. Wörter pro Untertitel (1 = Wort für Wort)
 log = subprocess.run(["ffmpeg", "-i", wav, "-af", "silencedetect=n=-33dB:d=0.1", "-f", "null", "-"], capture_output=True, text=True).stderr
 st = [float(x) for x in re.findall(r"silence_start: ([0-9.]+)", log)]; en = [float(x) for x in re.findall(r"silence_end: ([0-9.]+)", log)]
 dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", wav], capture_output=True, text=True).stdout)
@@ -28,6 +29,7 @@ for i, L in enumerate(lines):
         while j < len(words):
             n = 3 if len(" ".join(words[j:j + 3]).replace("*", "")) <= 16 else 2
             if len(words) - j == 4: n = 2
+            n = min(n, MAXW)
             chunks.append(words[j:j + n]); j += n
         tot = sum(len(" ".join(c)) for c in chunks); t = a
         for c in chunks:
