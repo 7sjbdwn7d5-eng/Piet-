@@ -3,9 +3,9 @@ import sys, os, numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 from sfxlib import *
 from sfxlib import T as T_
-B = [0, 2.95, 10.8, 16.7, 22.9, 29.35, 37.0]
-TRUTH = 1.55; ASK = B[1] + 1.85; HATE = B[1] + 3.95; AD = B[1] + 5.25; TV = B[2] + 3.0
-CONF = B[3] + 1.9; GAVEL = B[3] + 2.5; SHOP = B[3] + 3.55; GIFT = B[4] + 3.3
+B = [0, 3.32, 11.22, 16.85, 23.5, 29.8, 38.0]
+TRUTH = 1.7; ASK = 5.15; HATE = 7.1; AD = 8.52; TV = 14.35
+CONF = 19.6; GAVEL = 20.15; SHOP = 20.68; GIFT = 26.6
 tr = Track(B[-1])
 
 

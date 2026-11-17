@@ -1,6 +1,6 @@
 # „Was wäre, wenn ab morgen niemand mehr lügen könnte?" (alter Was-wäre-wenn-Stil)
 
-**Video:** `luegen_final.mp4`: 37 s, 1080×1920, 30 fps. Noch mit Platzhalter-Stimme (Thorsten). Die ElevenLabs-MP3 wird mit `fit_voice.py` eingepasst.
+**Video:** `luegen_final.mp4`: 38 s, 1080×1920, 30 fps. Sprecher: ElevenLabs James (`sprecher_james.mp3`), eingepasst mit `fit_voice.py --lines 0,1,6,9,12,16 --min-silence 0.25`.
 
 | Zeit | Szene | Einstellungen |
 |---|---|---|

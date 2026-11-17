@@ -16,13 +16,13 @@ const W = 1080, H = 1920;
 const ctx = document.getElementById('c').getContext('2d');
 const FONT = '"Inter", "Inter Display", sans-serif';
 
-const B = [0, 2.95, 10.8, 16.7, 22.9, 29.35, 37.0];   // Schnitte = Zeilenanfänge
+const B = [0, 3.32, 11.22, 16.85, 23.5, 29.8, 38.0];   // Schnitte = Zeilenanfänge
 const S = { hook: [B[0], B[1]], now: [B[1], B[2]], week: [B[2], B[3]], year: [B[3], B[4]], tenk: [B[4], B[5]], outro: [B[5], B[6]] };
-const TRUTH = 1.55;                  // Hook: "... niemand mehr lügen ..." -> Lügendetektor wird ruhig
-const ASK = B[1] + 1.85, HATE = B[1] + 3.95, AD = B[1] + 5.25;   // Büro: Frage / Antwort / Werbung
-const TV = B[2] + 3.0;               // Politiker
-const CONF = B[3] + 1.9, GAVEL = B[3] + 2.5, SHOP = B[3] + 3.55;  // Gericht / Bewertungen
-const GIFT = B[4] + 3.3;             // Geschenk
+const TRUTH = 1.7;                  // Hook: "... niemand mehr lügen ..." -> Lügendetektor wird ruhig
+const ASK = 5.15, HATE = 7.1, AD = 8.52;   // Büro: Frage / Antwort / Werbung
+const TV = 14.35;               // Politiker
+const CONF = 19.6, GAVEL = 20.15, SHOP = 20.68;  // Gericht / Bewertungen
+const GIFT = 26.6;             // Geschenk
 const WIPES = [AD, TV, SHOP, GIFT];
 window.DURATION = B[6];
 
