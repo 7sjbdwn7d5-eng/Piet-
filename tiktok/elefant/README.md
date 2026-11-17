@@ -1,6 +1,6 @@
 # Gleichnis-Format: „Der Elefant und das dünne Seil"
 
-**Video:** `elefant_final.mp4` – 34,4 s, 1080×1920, 30 fps. Erzähler vorerst Ersatzstimme; Sprecher-Fassung nach Upload.
+**Video:** `elefant_final.mp4` – 37,8 s, 1080×1920, 30 fps. Erzähler: ElevenLabs „James" (`sprecher_james.mp3`), alle Einstellungen und Wörter auf seine Sätze gelegt.
 
 **Stil (nach Vorbild-Video des Nutzers „Flöhe im Glas"):** Teil 1 = Geschichte im dunklen Raum mit Hängelampe/Lichtkegel, Holzboden,
 niedlicher Elefant, rote gestrichelte Grenze, Zähler oben links (Label + große farbige Zahl: blau → pink → rot).

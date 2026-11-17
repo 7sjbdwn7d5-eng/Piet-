@@ -1,9 +1,37 @@
 [
- [0.1, "Ein Babyelefant. Ein dünnes Seil. Ein kleiner Pflock.", "Ein Babyelefant. Ein dünnes Seil. Ein kleiner Pflock."],
- [4.35, "Er zieht. Und zieht. Tagelang. Doch der Pflock hält.", "Er zieht. Und zieht. Tagelang. Doch der Pflock *hält*."],
- [9.12, "Irgendwann hört er auf. Er hat gelernt: Ich komme hier nicht weg.", "Irgendwann hört er *auf*. Er hat gelernt: Ich komme hier nicht weg."],
- [13.11, "Jahre später wiegt er mehrere Tonnen. Ein Ruck, und das Seil wäre weg. Aber er versucht es nie wieder.", "Jahre später wiegt er mehrere Tonnen. Ein Ruck, und das Seil wäre weg. Aber er versucht es *nie* wieder."],
- [19.64, "Dummer Elefant, denkst du? Als Kind hast du gehört: Du kannst nicht singen. Du bist schlecht in Mathe.", "Dummer Elefant, denkst *du*? Als Kind hast du gehört: Du kannst nicht singen. Du bist schlecht in Mathe."],
- [25.84, "Heute versuchst du es gar nicht mehr. Dabei ist dein Seil längst gerissen.", "Heute versuchst du es gar nicht mehr. Dabei ist dein Seil längst *gerissen*."],
- [30.42, "Welches Seil hält dich noch fest?", "Welches Seil hält dich noch fest?"]
+ [
+  0.1,
+  "Ein Babyelefant. Ein dünnes Seil. Ein kleiner Pflock.",
+  "Ein Babyelefant. Ein dünnes Seil. Ein kleiner Pflock."
+ ],
+ [
+  4.93,
+  "Er zieht. Und zieht. Tagelang. Doch der Pflock hält.",
+  "Er zieht. Und zieht. Tagelang. Doch der Pflock *hält*."
+ ],
+ [
+  10.12,
+  "Irgendwann hört er auf. Er hat gelernt: Ich komme hier nicht weg.",
+  "Irgendwann hört er *auf*. Er hat gelernt: Ich komme hier nicht weg."
+ ],
+ [
+  15.0,
+  "Jahre später wiegt er mehrere Tonnen. Ein Ruck, und das Seil wäre weg. Aber er versucht es nie wieder.",
+  "Jahre später wiegt er mehrere Tonnen. Ein Ruck, und das Seil wäre weg. Aber er versucht es *nie* wieder."
+ ],
+ [
+  22.3,
+  "Dummer Elefant, denkst du? Als Kind hast du gehört: Du kannst nicht singen. Du bist schlecht in Mathe.",
+  "Dummer Elefant, denkst *du*? Als Kind hast du gehört: Du kannst nicht singen. Du bist schlecht in Mathe."
+ ],
+ [
+  29.16,
+  "Heute versuchst du es gar nicht mehr. Dabei ist dein Seil längst gerissen.",
+  "Heute versuchst du es gar nicht mehr. Dabei ist dein Seil längst *gerissen*."
+ ],
+ [
+  33.67,
+  "Welches Seil hält dich noch fest?",
+  "Welches Seil hält dich noch fest?"
+ ]
 ]

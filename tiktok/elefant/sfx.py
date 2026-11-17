@@ -3,8 +3,7 @@ import sys, os, numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 from sfxlib import *
 from sfxlib import T as T_
-T = dict(lamp=0, rope=1.2, stake=2.6, pull=4.35, pull2=5.1, days=6.2, hold=7.35, giveup=9.12, learn=10.47, noway=11.57,
-         years=13.11, tug=15.2, snap=16.1, never=17.26, dumb=19.64, child=21.2, sing=23.0, math=24.1, today=25.84, torn=27.7, end=30.42, out=34.4)
+T = dict(lamp=0, rope=1.74, stake=3.19, pull=4.88, pull2=6.02, days=7.33, hold=8.4, giveup=10.07, learn=11.81, noway=13.0, years=14.95, tug=17.58, snap=18.49, never=20.06, dumb=22.25, child=24.19, sing=25.77, math=27.28, today=29.11, torn=31.13, end=33.62, out=37.83)
 tr = Track(T['out'])
 
 
