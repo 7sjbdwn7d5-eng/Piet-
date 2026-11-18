@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Der Hauptmann von Köpenick</title>
+<style>
+  @font-face { font-family: 'Anton'; src: url('../fonts/anton-latin-400-normal.woff2') format('woff2'); }
+  html,body{margin:0;background:#000} canvas{display:block}
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// ============================================================
+//  Story-Format: "Der Hauptmann von Köpenick (1906)"
+//  Flache Vektor-Illustration, Figuren mit Mimik, Kamera-Moves,
+//  unscharfe Hintergründe, 2–3-Wort-Untertitel, REAL-Fakten-Schild.
+// ============================================================
+const W = 1080, H = 1920;
+let ctx = document.getElementById('c').getContext('2d');
+const MAIN = ctx;
+const OFF = {};
+const CAP = '"Anton", "Inter", sans-serif', UI = '"Inter", sans-serif';
+
+// ---- Zeitplan (Video-Sekunden) – auf den Sprecher gelegt ----
+const T = {
+  city: 0, paul: 2.05, coup: 4.0, halt: 6.75, order: 8.65, obey: 9.5, train: 11.1, rathaus: 12.85, mayor: 14.85, cash: 17.2, money: 19.25,
+  twist: 20.8, voigt: 22.75, shoe: 24.2, troedel: 24.95, nomoney: 27.4, end: 29.55, out: 36.0,
+};
+window.DURATION = T.out;
+const SHOTS = Object.keys(T).filter(k => k !== 'out');
+const REAL = [
+  [0.5, T.coup, '16. Oktober 1906 – eine wahre Geschichte'],
+  [T.obey, T.train + 1.5, 'Rund 10 Soldaten folgten ihm'],
+  [T.mayor + 0.2, T.cash + 1.5, 'Bürgermeister Georg Langerhans verhaftet'],
+  [T.money, T.twist, 'Beute: 4.002 Mark und 37 Pfennig'],
+  [T.voigt + 0.3, T.troedel, 'Wilhelm Voigt, 57, Schuster, vorbestraft'],
+  [T.troedel + 0.2, T.nomoney + 1, 'Uniform beim Trödler zusammengekauft'],
+];
+// Untertitel: wird von captions.json ersetzt, falls vorhanden (window.CAPTIONS)
+let CAPTIONS = window.CAPTIONS || [];
+
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const inv = (a, b, x) => clamp((x - a) / (b - a));
+const ease = k => k * k * (3 - 2 * k);
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+const backOut = k => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+function hex(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function mixc(a, b, k) { const A = hex(a), B2 = hex(b); return `rgb(${lerp(A[0], B2[0], k) | 0},${lerp(A[1], B2[1], k) | 0},${lerp(A[2], B2[2], k) | 0})`; }
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const R = rng(1979); const rr = (a, b) => lerp(a, b, R());
+function shotOf(t) { let s = SHOTS[0]; for (const k of SHOTS) if (t >= T[k]) s = k; return s; }
+function nextT(k) { const i = SHOTS.indexOf(k); return i < SHOTS.length - 1 ? T[SHOTS[i + 1]] : T.out; }
+// Schnelle Unschärfe: Ebene in kleiner Auflösung zeichnen und hochskaliert einblenden (statt teurem ctx.filter)
+function layer(factor, fn, filter = 'none') {
+  const key = factor; if (!OFF[key]) { const c = document.createElement('canvas'); c.width = Math.ceil(W / factor); c.height = Math.ceil(H / factor); OFF[key] = c; }
+  const oc = OFF[key], o = oc.getContext('2d'), main = ctx, m = main.getTransform();
+  o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, oc.width, oc.height);
+  o.setTransform(m.a / factor, m.b / factor, m.c / factor, m.d / factor, m.e / factor, m.f / factor);
+  ctx = o; try { fn(); } finally { ctx = main; }
+  main.save(); main.setTransform(1, 0, 0, 1, 0, 0); main.imageSmoothingEnabled = true; main.imageSmoothingQuality = 'high'; main.filter = filter; main.drawImage(oc, 0, 0, W, H); main.restore();
+}
+function blurred(px, fn) { layer(px >= 10 ? 7 : 5, fn); }
+function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
+function rrect(x, y, w, h, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); }
+function circ(x, y, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+function ell(x, y, rx, ry, c, rot = 0) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, 7); ctx.fill(); }
+function poly(pts, c) { ctx.fillStyle = c; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fill(); }
+
+// ============================================================
+//  FIGUREN (flacher Stil, große Augen, Mimik)
+// ============================================================
+// mood: 'calm' | 'happy' | 'worried' | 'shock' | 'sad'
+function face(x, y, r, mood, look = [0, 0], o = {}) {
+  const eyeR = r * 0.2, ex = r * 0.36, ey = -r * 0.05;
+  for (const s of [-1, 1]) {
+    const open = mood === 'shock' ? 1.25 : 1;
+    ell(x + s * ex, y + ey, eyeR * open, eyeR * 1.15 * open, '#ffffff');
+    circ(x + s * ex + look[0] * eyeR * 0.45, y + ey + look[1] * eyeR * 0.45, eyeR * (mood === 'shock' ? 0.45 : 0.6), '#231a17');
+    circ(x + s * ex + look[0] * eyeR * 0.45 - eyeR * 0.18, y + ey + look[1] * eyeR * 0.45 - eyeR * 0.2, eyeR * 0.16, '#fff');
+    // Augenbrauen: innen höher = besorgt/traurig, innen tiefer = wütend
+    ctx.strokeStyle = o.brow || '#3a2418'; ctx.lineWidth = r * 0.07; ctx.lineCap = 'round'; ctx.beginPath();
+    const by = y + ey - eyeR * 1.55 - (mood === 'shock' ? eyeR * 0.5 : 0) - (mood === 'happy' ? eyeR * 0.15 : 0);
+    const innerUp = mood === 'worried' || mood === 'sad' ? eyeR * 0.55 : mood === 'angry' ? -eyeR * 0.5 : 0;
+    ctx.moveTo(x + s * (ex - eyeR * 0.9), by - innerUp); ctx.lineTo(x + s * (ex + eyeR), by + innerUp * 0.3);
+    ctx.stroke();
+  }
+  // Mund
+  ctx.strokeStyle = '#3a1f17'; ctx.lineWidth = r * 0.07; ctx.beginPath();
+  const my = y + r * 0.45;
+  if (mood === 'happy') ctx.arc(x, my - r * 0.12, r * 0.22, 0.2, Math.PI - 0.2);
+  else if (mood === 'shock') { ctx.stroke(); ell(x, my, r * 0.12, r * 0.16, '#3a1f17'); return; }
+  else if (mood === 'worried' || mood === 'sad') ctx.arc(x, my + r * 0.14, r * 0.18, Math.PI + 0.4, -0.4);
+  else { ctx.moveTo(x - r * 0.14, my); ctx.lineTo(x + r * 0.14, my); }
+  ctx.stroke();
+}
+function sweat(x, y, s, t) { const k = (t * 1.2) % 1; ctx.save(); ctx.globalAlpha = 1 - k * 0.6; ctx.fillStyle = '#9fd8ff'; ctx.beginPath(); ctx.moveTo(x, y + k * 20 * s - 18 * s); ctx.quadraticCurveTo(x + 12 * s, y + k * 20 * s + 6 * s, x, y + k * 20 * s + 10 * s); ctx.quadraticCurveTo(x - 12 * s, y + k * 20 * s + 6 * s, x, y + k * 20 * s - 18 * s); ctx.fill(); ctx.restore(); }
+// Person (Ganzkörper). opts: skin, tunic, hair, mood, look, arms:[l,r] Winkel, walk, carry
+function person(x, y, s, o = {}) {
+  const skin = o.skin || '#e0a57a', tunic = o.tunic || '#c9583a', hair = o.hair || '#3a2418';
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  const w = o.walk || 0, lg = Math.sin(w) * 18;
+  // Beine
+  ctx.strokeStyle = skin; ctx.lineWidth = 22; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-16, -110); ctx.lineTo(-20 - lg, -8); ctx.moveTo(16, -110); ctx.lineTo(20 + lg, -8); ctx.stroke();
+  ell(-22 - lg, -4, 24, 11, o.modern || o.coat ? '#2a2420' : '#6a4126'); ell(22 + lg, -4, 24, 11, o.modern || o.coat ? '#2a2420' : '#6a4126');
+  if (o.coat) { poly([[-50, -275], [50, -275], [70, -60], [-70, -60]], o.coat); rect(-4, -270, 8, 200, 'rgba(0,0,0,0.25)'); }
+  else if (o.modern) { ctx.strokeStyle = o.pants || '#3a4a6a'; ctx.lineWidth = 26; ctx.beginPath(); ctx.moveTo(-16, -150); ctx.lineTo(-20 - lg, -12); ctx.moveTo(16, -150); ctx.lineTo(20 + lg, -12); ctx.stroke(); rrect(-48, -275, 96, 140, 22, tunic); poly([[-18, -275], [0, -250], [18, -275]], 'rgba(255,255,255,0.7)'); }
+  else { poly([[-46, -270], [46, -270], [62, -105], [-62, -105]], tunic); rect(-50, -200, 100, 12, 'rgba(0,0,0,0.15)'); }
+  // Arme
+  const [al, ar] = o.arms || [0.15, -0.15];
+  ctx.strokeStyle = skin; ctx.lineWidth = 20;
+  for (const [sx, v] of [[-1, al], [1, ar]]) { const a = Math.abs(v); ctx.beginPath(); ctx.moveTo(sx * 40, -255); ctx.lineTo(sx * 40 + sx * Math.sin(a) * 105, -255 + Math.cos(a) * 105); ctx.stroke(); }
+  // Kopf
+  circ(0, -330, 62, skin);
+  ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0, -342, 64, Math.PI * 1.02, Math.PI * 1.98); ctx.quadraticCurveTo(40, -360, 0, -362); ctx.fill();
+  if (o.beard) { ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0, -318, 58, 0.15, Math.PI - 0.15); ctx.fill(); circ(0, -318, 40, skin); }
+  face(0, -326, 62, o.mood || 'calm', o.look || [0, 0], { brow: hair });
+  if (o.sweat) sweat(56, -380, 1.2, o.t || 0);
+  if (o.hat) { rrect(-70, -392, 140, 22, 10, o.hat); rrect(-48, -440, 96, 56, 14, o.hat); }
+  if (o.pillow) { rrect(-80, -440, 160, 56, 26, '#e9d8b8'); rect(-80, -414, 160, 6, '#c9b590'); }
+  ctx.restore();
+}
+function sky(top, bot, y1 = 1300) { const g = ctx.createLinearGradient(0, 0, 0, y1); g.addColorStop(0, top); g.addColorStop(1, bot); ctx.fillStyle = g; ctx.fillRect(-400, -400, W + 800, y1 + 400); }
+const stars = Array.from({ length: 200 }, () => ({ x: rr(-100, W + 100), y: rr(-200, 1200), r: rr(0.8, 2.6), b: rr(0.3, 1) }));
+function starfield(t, a = 1) { for (const s of stars) { ctx.fillStyle = `rgba(255,255,255,${a * s.b * (0.7 + 0.3 * Math.sin(t * 2 + s.x))})`; ctx.fillRect(s.x, s.y, s.r, s.r); } }
+function pine(x, y, s, c = '#1a2a24') { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); rect(-8, -40, 16, 40, '#2a1e16'); for (let i = 0; i < 4; i++) poly([[-90 + i * 15, -40 - i * 70], [0, -160 - i * 70], [90 - i * 15, -40 - i * 70]], c); ctx.restore(); }
+function forestRow(base, n, s, c, seed = 1) { const r2 = rng(seed); for (let i = 0; i < n; i++) pine(-60 + i * (1200 / n) + r2() * 40, base + r2() * 30, s * (0.8 + r2() * 0.4), c); }
+const SH = {};
+function camera(scale, x = 0, y = 0) { ctx.translate(W / 2 + x, H / 2 + y); ctx.scale(scale, scale); ctx.translate(-W / 2, -H / 2); }
+
+// ---------- Kaiserzeit-Kostüme ----------
+const BLUE = '#26355e', RED = '#b3261e', GOLD = '#d8b04a';
+function helmet(x, y, r) {   // Pickelhaube, (x,y) = Kopfmitte, r = Kopfradius
+  ctx.fillStyle = '#16161a'; ctx.beginPath(); ctx.arc(x, y - r * 0.25, r * 1.02, Math.PI, 0); ctx.fill();
+  rect(x - r * 1.15, y - r * 0.3, r * 2.3, r * 0.14, '#16161a');
+  poly([[x - r * 0.12, y - r * 1.2], [x + r * 0.12, y - r * 1.2], [x, y - r * 1.75]], GOLD); rect(x - r * 0.16, y - r * 1.25, r * 0.32, r * 0.14, GOLD);
+  ell(x, y - r * 0.72, r * 0.26, r * 0.3, GOLD);
+}
+function cap(x, y, r, band = RED) {   // Offiziers-Schirmmütze
+  ell(x, y - r * 0.78, r * 1.12, r * 0.42, BLUE); rect(x - r * 0.92, y - r * 0.82, r * 1.84, r * 0.32, band);
+  ell(x + r * 0.1, y - r * 0.46, r * 0.95, r * 0.16, '#111'); circ(x, y - r * 0.68, r * 0.1, GOLD);
+}
+function mustache(x, y, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x - r * 0.24, y + r * 0.3, r * 0.3, r * 0.11, -0.25, 0, 7); ctx.ellipse(x + r * 0.24, y + r * 0.3, r * 0.3, r * 0.11, 0.25, 0, 7); ctx.fill(); }
+// Ganzkörper-Figuren der Szene
+function soldier(x, y, s, o = {}) { person(x, y, s, { modern: true, tunic: BLUE, pants: '#1e1e26', skin: o.skin || '#e8b890', hair: '#5a3a1a', mood: o.mood || 'calm', look: o.look || [1, 0], arms: o.arms, walk: o.walk, t: o.t, sweat: o.sweat });
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); helmet(0, -330, 62); rect(-48, -200, 96, 10, '#e8e0c8');
+  if (o.rifle) { ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(70, -60); ctx.lineTo(70, -420); ctx.stroke(); }
+  if (o.paul) { ctx.restore(); return; } ctx.restore(); }
+function captain(x, y, s, o = {}) { person(x, y, s, { coat: '#1e2848', skin: '#e0a882', hair: '#8a8a88', mood: o.mood || 'angry', look: o.look || [1, 0], arms: o.arms || [0.2, 0.2], walk: o.walk, t: o.t });
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); for (let i = 0; i < 4; i++) circ(-14, -250 + i * 40, 6, GOLD); for (let i = 0; i < 4; i++) circ(14, -250 + i * 40, 6, GOLD);
+  rect(-62, -275, 30, 12, GOLD); rect(32, -275, 30, 12, GOLD); mustache(0, -326, 62, '#9a9a98'); cap(0, -330, 62); ctx.restore(); }
+function civil(x, y, s, o = {}) { person(x, y, s, { coat: o.coat || '#2a2a2e', skin: o.skin || '#e8b890', hair: o.hair || '#4a3a2a', mood: o.mood || 'calm', look: o.look || [0, 0], arms: o.arms, walk: o.walk, t: o.t, sweat: o.sweat });
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); if (o.mus) mustache(0, -326, 62, o.mus); if (o.tophat) { rect(-56, -396, 112, 14, '#111'); rrect(-40, -480, 80, 90, 6, '#111'); } ctx.restore(); }
+// Brustbild für Nahaufnahmen: (x,y) Kopfmitte, r Kopfradius
+function bust(x, y, r, o = {}) {
+  const skin = o.skin || '#e8b890';
+  rrect(x - r * 1.05, y + r * 0.85, r * 2.1, r * 3.4, r * 0.45, o.body || BLUE);
+  if (o.collar) rect(x - r * 0.5, y + r * 0.85, r, r * 0.3, o.collar);
+  if (o.buttons) for (let i = 0; i < 4; i++) circ(x, y + r * 1.45 + i * r * 0.42, r * 0.07, GOLD);
+  if (o.apron) rrect(x - r * 0.75, y + r * 1.3, r * 1.5, r * 3, r * 0.2, '#8a6a42');
+  circ(x, y, r, skin); circ(x - r, y + r * 0.05, r * 0.2, skin); circ(x + r, y + r * 0.05, r * 0.2, skin);
+  ctx.fillStyle = o.hair || '#5a3a1a'; ctx.beginPath(); ctx.arc(x, y - r * 0.14, r * 1.03, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
+  face(x, y + r * 0.05, r, o.mood || 'calm', o.look || [0, 0], { brow: o.brow || '#3a2418' });
+  if (o.mus) mustache(x, y + r * 0.05, r, o.mus);
+  if (o.helmet) helmet(x, y, r); if (o.cap) cap(x, y, r);
+}
+
+// ---------- Kulissen ----------
+function facades(base, o = {}) {
+  const cols = ['#d8c8a8', '#c8a888', '#b8b0a0', '#d0b898', '#c0a080'];
+  for (let i = 0; i < 6; i++) { const x = -200 + i * 260, h = 1050 + (i % 2) * 120;
+    rect(x, base - h, 250, h, cols[i % 5]); rect(x, base - h, 250, 30, 'rgba(0,0,0,0.15)'); rect(x - 6, base - h - 20, 262, 24, '#8a7a68');
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) { const wx = x + 30 + c * 75, wy = base - h + 70 + r * 230; rect(wx, wy, 50, 130, o.night ? '#f0c870' : '#3a4a5a'); rect(wx - 6, wy - 16, 62, 14, '#8a7a68'); }
+    rect(x + 85, base - 260, 80, 260, '#4a3020'); }
+}
+function cobbles(y0) { rect(-300, y0, W + 600, H + 400 - y0, '#6a6460'); ctx.fillStyle = 'rgba(0,0,0,0.18)'; for (let y = y0 + 20; y < H + 200; y += 46) for (let x = -300 + ((y / 46) % 2) * 40; x < W + 300; x += 80) { ctx.beginPath(); ctx.ellipse(x, y, 34, 16, 0, 0, 7); ctx.fill(); } }
+function lamp(x, base, s) { ctx.save(); ctx.translate(x, base); ctx.scale(s, s); rect(-8, -620, 16, 620, '#2a2a2e'); poly([[-40, -680], [40, -680], [28, -610], [-28, -610]], '#2a2a2e'); rect(-24, -670, 48, 54, '#f2d890'); ctx.restore(); }
+function carriage(x, base, s, t) { ctx.save(); ctx.translate(x, base); ctx.scale(s, s);
+  const lg = Math.sin(t * 8) * 18; ell(-260, -240, 110, 60, '#5a3a22'); ell(-170, -300, 36, 60, '#5a3a22', 0.5); ctx.strokeStyle = '#5a3a22'; ctx.lineWidth = 18; for (const lx of [-330, -300, -220, -190]) { ctx.beginPath(); ctx.moveTo(lx, -200); ctx.lineTo(lx + (lx % 20 ? lg : -lg), -10); ctx.stroke(); }
+  rrect(-80, -360, 300, 230, 30, '#2a1a12'); rect(-50, -330, 100, 90, '#c8d8e0'); rect(80, -330, 100, 90, '#c8d8e0');
+  for (const wx of [-30, 180]) { ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(wx, -80, 75, 0, 7); ctx.stroke(); for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI + t * 5; ctx.beginPath(); ctx.moveTo(wx + Math.cos(a) * 75, -80 + Math.sin(a) * 75); ctx.lineTo(wx - Math.cos(a) * 75, -80 - Math.sin(a) * 75); ctx.stroke(); } }
+  ctx.restore(); }
+function street(t, o = {}) { sky(o.night ? '#1a2240' : '#a8b8c8', o.night ? '#3a3a58' : '#e8e0d0', 900); facades(1350, o); cobbles(1350); lamp(160, 1450, 1.0); lamp(940, 1450, 1.0); }
+function office(t) {
+  rect(-200, -200, W + 400, H + 400, '#6a4a32'); for (let x = -200; x < W + 200; x += 120) rect(x, -200, 8, 1700, 'rgba(0,0,0,0.15)');
+  rect(-200, 1500, W + 400, 700, '#4a3020');
+  rrect(380, 300, 320, 400, 10, '#c8a860'); rrect(400, 320, 280, 360, 8, '#7a8a9a'); circ(540, 450, 70, '#e8b890'); mustache(540, 450, 70, '#5a4030');  // Kaiserbild
+  rect(530, 220, 20, 80, '#3a2418');
+  rect(100, 1300, 880, 50, '#3a2418'); rect(130, 1350, 50, 300, '#2a1a10'); rect(900, 1350, 50, 300, '#2a1a10');
+  rrect(240, 1250, 180, 60, 6, '#f2ead8'); rrect(640, 1230, 70, 80, 10, '#1a1a1a');
+}
+function rathaus(t) {
+  sky('#9ab0c8', '#e8dcc8', 1000);
+  rect(140, 560, 800, 900, '#a8452e'); rect(430, 180, 220, 420, '#9a3e28'); poly([[410, 190], [670, 190], [540, 20]], '#3a4a48');
+  circ(540, 330, 60, '#f2ead8'); ctx.strokeStyle = '#222'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(540, 330); ctx.lineTo(540, 290); ctx.moveTo(540, 330); ctx.lineTo(570, 340); ctx.stroke();
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) { if (r === 2 && c === 2) continue; const x = 190 + c * 150, y = 640 + r * 230; rrect(x, y, 90, 150, [45, 45, 0, 0], '#2a3440'); }
+  rrect(450, 1150, 180, 310, [90, 90, 0, 0], '#3a2214');
+  ctx.font = `60px ${CAP}`; ctx.fillStyle = '#f2ead8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('RATHAUS', 540, 1110);
+  cobbles(1460);
+}
+function train(x, y, s, t) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  rrect(-420, -260, 260, 200, 10, '#2a2a30'); rect(-470, -330, 80, 90, '#2a2a30'); rrect(-160, -200, 380, 140, 70, '#1a1a20'); rect(120, -340, 60, 150, '#1a1a20'); rect(-120, -110, 340, 20, RED);
+  rrect(250, -240, 420, 180, 10, '#3a5a3a'); for (let i = 0; i < 4; i++) rect(280 + i * 95, -210, 70, 70, '#e8d8a0');
+  for (const wx of [-340, -220, -40, 120, 320, 580]) { circ(wx, -40, wx > -100 && wx < 200 ? 60 : 42, '#111'); circ(wx, -40, 14, '#8a8a8a'); }
+  ctx.restore(); }
+
+// ---------- Einstellungen ----------
+SH.city = (t, lt, len) => { ctx.save(); camera(1.12 - 0.08 * ease(lt / len));
+  street(t); carriage(lerp(-300, 1500, lt / 4), 1700, 0.9, t);
+  civil(820, 1760, 0.85, { tophat: true, mus: '#3a2a1a', walk: t * 5, look: [-1, 0] }); civil(320, 1820, 0.8, { coat: '#6a2a3a', hair: '#6a3a1a', walk: t * 5 + 1, look: [1, 0] });
+  ctx.restore();
+  const k = backOut(clamp(lt / 0.35)) * (1 - clamp((lt - 1.6) / 0.3)); if (k > 0.01) { ctx.save(); ctx.translate(540, 950); ctx.scale(k, k); capText([['BERLIN', '#fff'], ['1906', '#ffb020']], 0, 0, 190, true); ctx.restore(); } };
+SH.paul = (t, lt, len) => { ctx.save(); camera(1.08 + 0.06 * ease(lt / len));
+  blurred(10, () => street(t)); bust(540, 900, 230, { helmet: true, mood: 'happy', look: [0.6, -0.1], buttons: true, collar: RED });
+  ctx.restore();
+  const k = backOut(clamp((lt - 0.3) / 0.3)); if (k > 0) { ctx.save(); ctx.translate(850, 560); ctx.scale(k, k); rrect(-120, -50, 240, 100, 50, '#ffb020'); ctx.fillStyle = '#111'; ctx.font = `64px ${CAP}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('PAUL, 18', 0, 4); ctx.restore(); } };
+SH.coup = (t, lt, len) => { ctx.save(); camera(1.0, -lt * 50, 0);
+  street(t);
+  for (let i = 0; i < 6; i++) soldier(120 + i * 165 + lt * 60, 1800, 0.95, { rifle: true, walk: t * 6, look: [1, 0], t });
+  const px = 120 + 2 * 165 + lt * 60; poly([[px - 30, 1240], [px + 30, 1240], [px, 1290]], '#ffb020');
+  ctx.font = `60px ${CAP}`; ctx.fillStyle = '#ffb020'; ctx.textAlign = 'center'; ctx.fillText('PAUL', px, 1200);
+  ctx.restore(); };
+SH.halt = (t, lt, len) => { ctx.save(); camera(1.05 + 0.05 * ease(lt / len));
+  street(t); const k = ease(clamp(lt / 0.9));
+  captain(lerp(-150, 260, k), 1830, 1.05, { walk: k < 1 ? t * 6 : 0, arms: [0.2, k > 0.8 ? 2.8 : 0.3], look: [1, 0], t });
+  for (let i = 0; i < 4; i++) soldier(560 + i * 150, 1800, 0.9, { rifle: true, walk: k < 0.7 ? t * 6 : 0, look: [-1, 0], mood: k > 0.8 ? 'shock' : 'calm', t });
+  ctx.restore(); };
+SH.order = (t, lt, len) => { const sh = lt < 0.3 ? Math.sin(t * 70) * 10 : 0; ctx.save(); camera(1.1 + 0.08 * ease(lt / len), sh, 0);
+  blurred(10, () => street(t)); bust(540, 920, 240, { body: '#1e2848', buttons: true, skin: '#e0a882', hair: '#8a8a88', brow: '#6a6a68', mus: '#9a9a98', cap: true, mood: 'angry', look: [0, 0.2] });
+  ctx.restore();
+  const k = backOut(clamp(lt / 0.25)); ctx.save(); ctx.translate(540, 380); ctx.scale(k, k); capText([['MIR NACH!', '#ff3b30']], 0, 0, 170); ctx.restore(); };
+SH.obey = (t, lt, len) => { ctx.save(); camera(1.0, -lt * 40, 0);
+  street(t); const go = ease(clamp((lt - 0.6) / 0.8));
+  captain(250 + go * 200, 1830, 1.05, { walk: go > 0 && go < 1 ? t * 6 : 0, look: [1, 0], t });
+  for (let i = 0; i < 4; i++) soldier(560 + i * 150 + go * 160, 1800, 0.9, { rifle: true, arms: [0.2, lt < 0.6 ? 2.9 : 0.2], walk: go > 0 && go < 1 ? t * 6 + i : 0, look: [-1, 0], t });
+  ctx.restore(); };
+SH.train = (t, lt, len) => { ctx.save(); camera(1.0);
+  sky('#9ab8d8', '#f0e4c8', 1300); rect(-200, 1300, W + 400, 800, '#6a8a4a');
+  blurred(6, () => { for (let i = 0; i < 9; i++) { const x = ((i * 190 - lt * 500) % 1700 + 1700) % 1700 - 300; pine(x, 1320, 1.1, '#2a4a2a'); } });
+  rect(-200, 1440, W + 400, 16, '#5a4a3a'); for (let x = -((lt * 700) % 60); x < W + 60; x += 60) rect(x, 1450, 30, 14, '#3a2a1a');
+  const bob = Math.sin(t * 20) * 3; train(lerp(300, 460, lt / len), 1440 + bob, 0.95, t);
+  for (let i = 0; i < 8; i++) { const k = (lt * 0.9 + i / 8) % 1; circ(lerp(300, 460, lt / len) - 450 * 0.95 - k * 500, 1090 - k * 350, 50 + k * 110, `rgba(240,240,240,${0.8 * (1 - k)})`); }
+  rrect(620, 700, 380, 120, 16, '#f2ead8'); ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.roundRect(620, 700, 380, 120, 16); ctx.stroke();
+  ctx.font = `76px ${CAP}`; ctx.fillStyle = '#1a1a1a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('KÖPENICK →', 810, 762);
+  ctx.restore(); };
+SH.rathaus = (t, lt, len) => { ctx.save(); camera(1.0 + 0.1 * ease(lt / len), 0, 60 * ease(lt / len));
+  rathaus(t); const k = ease(clamp(lt / 1.0));
+  for (let i = 0; i < 4; i++) soldier(lerp(-200 + i * 120, [260, 400, 680, 820][i], k), 1820, 0.75, { rifle: true, walk: k < 1 ? t * 7 + i : 0, look: [i < 2 ? 1 : -1, 0], t });
+  ctx.restore(); };
+SH.mayor = (t, lt, len) => { ctx.save(); camera(1.05 + 0.06 * ease(lt / len));
+  office(t);
+  civil(540, 1560, 1.1, { coat: '#1a1a1e', mus: '#4a3020', hair: '#4a3020', mood: 'shock', look: [-1, 0], arms: [2.4, 2.4], sweat: true, t });
+  rect(100, 1300, 880, 50, '#3a2418'); rect(120, 1350, 840, 260, '#4a2e1a'); rect(150, 1380, 360, 200, 'rgba(0,0,0,0.15)'); rect(570, 1380, 360, 200, 'rgba(0,0,0,0.15)');
+  soldier(250, 1880, 1.0, { rifle: true, look: [1, -0.2] }); soldier(840, 1880, 1.0, { rifle: true, look: [-1, -0.2] });
+  ctx.restore(); };
+SH.cash = (t, lt, len) => { ctx.save(); camera(1.15 + 0.08 * ease(lt / len));
+  blurred(10, () => office(t));
+  const open = ease(clamp(lt / 0.6));
+  rrect(240, 1020, 600, 330, 20, '#3a4a3a'); rect(240, 1180, 600, 14, GOLD); rrect(500, 1150, 80, 80, 10, GOLD);
+  ctx.save(); ctx.translate(240, 1020); ctx.transform(1, 0, 0, 1 - open * 1.6, 0, 0); rrect(0, -40, 600, 60, 16, '#4a5a4a'); ctx.restore();
+  if (open > 0.3) { const g = ctx.createRadialGradient(540, 1000, 20, 540, 1000, 450); g.addColorStop(0, 'rgba(255,220,120,0.8)'); g.addColorStop(1, 'rgba(255,220,120,0)'); ctx.fillStyle = g; ctx.fillRect(0, 500, W, 900);
+    for (let i = 0; i < 10; i++) rrect(280 + i * 52, 1000 - (i % 3) * 18, 120, 60, 6, i % 2 ? '#c8d8a0' : '#e8d8b0');
+    for (let i = 0; i < 14; i++) circ(300 + i * 36, 1040 + (i % 2) * 12, 18, GOLD); }
+  // Hand des Hauptmanns greift zu
+  const hk = ease(clamp((lt - 0.9) / 0.6)); rect(lerp(1100, 700, hk), 900, 500, 90, '#1e2848'); circ(lerp(1100, 700, hk), 945, 50, '#e0a882');
+  ctx.restore(); };
+SH.money = (t, lt, len) => { ctx.save(); camera(1.0);
+  rect(-200, -200, W + 400, H + 400, '#1a1410');
+  for (let i = 0; i < 60; i++) { const k = (lt * 0.9 + i / 60) % 1; const x = (i * 131) % W; circ(x, -100 + k * 2100, 22, GOLD); circ(x - 6, -106 + k * 2100, 8, '#f2d890'); }
+  ctx.restore();
+  const n = Math.round(lerp(0, 4002, ease(clamp(lt / 1.2))));
+  const k = backOut(clamp(lt / 0.3)); ctx.save(); ctx.translate(540, 900); ctx.scale(k, k); capText([[n.toLocaleString('de-DE') + ' MARK', '#ffb020']], 0, 0, 190); ctx.restore(); };
+SH.twist = (t, lt, len) => { const g = lt > 0.8 && lt < 1.2 ? Math.sin(t * 90) * 20 : 0; ctx.save(); camera(1.1 + 0.1 * ease(lt / len), g, 0);
+  blurred(10, () => rathaus(t)); bust(540, 920, 240, { body: '#1e2848', buttons: true, skin: '#e0a882', hair: '#8a8a88', brow: '#6a6a68', mus: '#9a9a98', cap: true, mood: lt > 1.0 ? 'happy' : 'calm', look: [-0.6, 0] });
+  ctx.restore();
+  if (lt > 0.9) { const k = backOut(clamp((lt - 0.9) / 0.3)); ctx.save(); ctx.translate(800, 560); ctx.scale(k, k); capText([['?', '#ff3b30']], 0, 0, 260); ctx.restore(); } };
+SH.voigt = (t, lt, len) => { ctx.save(); camera(1.08 + 0.06 * ease(lt / len));
+  rect(-200, -200, W + 400, H + 400, '#3a2e26');
+  const k = ease(clamp(lt / 0.5));
+  bust(540, 920, 240, { body: k > 0.5 ? '#5a4a3a' : '#1e2848', apron: k > 0.5, buttons: k <= 0.5, skin: '#e0a882', hair: '#8a8a88', brow: '#6a6a68', mus: '#9a9a98', cap: k <= 0.5, mood: 'calm', look: [0.4, 0.1] });
+  if (k > 0 && k < 1) { ctx.fillStyle = `rgba(255,255,255,${1 - Math.abs(k - 0.5) * 2})`; ctx.fillRect(0, 0, W, H); }
+  ctx.restore();
+  const k2 = backOut(clamp((lt - 0.4) / 0.3)); if (k2 > 0) { ctx.save(); ctx.translate(540, 420); ctx.scale(k2, k2); capText([['WILHELM VOIGT, 57', '#fff']], 0, 0, 100); ctx.restore(); } };
+SH.shoe = (t, lt, len) => { ctx.save(); camera(1.15);
+  blurred(10, () => { rect(-200, -200, W + 400, H + 400, '#3a2e26'); for (let i = 0; i < 6; i++) rrect(120 + i * 150, 700, 110, 160, 20, '#5a3a22'); });
+  rect(-200, 1250, W + 400, 800, '#6a4a2a');
+  // Stiefel auf dem Leisten
+  poly([[380, 900], [520, 900], [540, 1130], [760, 1150], [780, 1240], [380, 1240]], '#3a2418'); rect(370, 1240, 420, 26, '#1a1a1a');
+  const hk = Math.abs(Math.sin(t * 7)); ctx.save(); ctx.translate(760, 980 - hk * 120); ctx.rotate(-0.3 - hk * 0.4); rect(-12, 0, 24, 260, '#8a6a42'); rrect(-60, -40, 120, 60, 10, '#5a5a60'); ctx.restore();
+  ctx.restore(); };
+SH.troedel = (t, lt, len) => { ctx.save(); camera(1.05 + 0.06 * ease(lt / len));
+  rect(-200, -200, W + 400, H + 400, '#5a4a3a'); rect(-200, 1500, W + 400, 700, '#3a2e22');
+  ctx.font = `86px ${CAP}`; ctx.fillStyle = '#f2ead8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('TRÖDEL', 540, 650);
+  ctx.save(); ctx.translate(0, 180); rect(120, 560, 840, 12, '#2a2a2a');
+  for (let i = 0; i < 4; i++) { const x = 220 + i * 210; ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, 566); ctx.lineTo(x, 610); ctx.stroke(); poly([[x - 80, 610], [x + 80, 610], [x + 100, 1050], [x - 100, 1050]], ['#6a5a4a', '#1e2848', '#7a3a3a', '#4a5a3a'][i]); }
+  for (let i = 0; i < 4; i++) circ(430, 680 + i * 80, 9, GOLD);
+  const k = backOut(clamp((lt - 0.3) / 0.3)); if (k > 0) { ctx.save(); ctx.translate(520, 1110); ctx.rotate(-0.1); ctx.scale(k, k); rrect(-90, -40, 180, 80, 10, '#f2ead8'); ctx.fillStyle = '#b3261e'; ctx.font = `52px ${CAP}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('BILLIG', 0, 4); ctx.restore(); }
+  ctx.restore();
+  civil(800, 1840, 1.05, { coat: '#4a3a2e', hair: '#8a8a88', mus: '#9a9a98', skin: '#e0a882', mood: 'happy', look: [-1, -0.3], arms: [1.6, 0.2] });
+  ctx.restore(); };
+SH.nomoney = (t, lt, len) => { ctx.save(); camera(1.05, -lt * 30, 0);
+  rathaus(t); captain(540, 1860, 1.05, { mood: 'worried', look: [0, -0.4], arms: [0.5, 0.5], t });
+  rrect(380, 1620, 140, 90, 10, '#3a4a3a');
+  for (let i = 0; i < 3; i++) { ctx.save(); ctx.translate(300 + i * 240, 1180 - Math.abs(Math.sin(t * 3 + i)) * 40); capText([['?', '#ffb020']], 0, 0, 150); ctx.restore(); }
+  ctx.restore(); };
+SH.end = (t, lt, len) => {
+  ctx.save(); camera(1.05 + 0.04 * ease(lt / len)); blurred(8, () => { street(t, { night: true }); }); ctx.restore();
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, W, H);
+  const k1 = backOut(clamp((lt - 0.1) / 0.4));
+  if (k1 > 0) { ctx.save(); ctx.translate(540, 760); ctx.scale(k1, k1); capText([['WAS SUCHTE ER', '#fff'], ['WIRKLICH?', '#ff3b30']], 0, 0, 130, true); ctx.restore(); }
+  const k2 = clamp((lt - 1.4) / 0.4);
+  if (k2 > 0) { ctx.save(); ctx.globalAlpha = k2; rrect(130, 1060, 820, 110, 55, '#fff'); ctx.fillStyle = '#111'; ctx.font = `900 50px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('Schreibt es in die Kommentare', 540, 1116); ctx.restore(); }
+  const k3 = clamp((lt - 2.2) / 0.4); if (k3 > 0) { ctx.save(); ctx.globalAlpha = k3; capText([['AUFLÖSUNG IN TEIL 2', '#ffb020']], 540, 1300, 70); ctx.restore(); }
+};
+
+// ============================================================
+//  TEXT: Untertitel (2–3 Wörter) + REAL-Schild
+// ============================================================
+function capText(lines, x, y, size, stacked = false) {
+  ctx.font = `${size}px ${CAP}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  lines.forEach(([txt, col], i) => {
+    const yy = y + (stacked ? (i - (lines.length - 1) / 2) * size * 1.1 : 0);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6; ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.12; ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.strokeText(txt, x, yy); ctx.restore();
+    ctx.fillStyle = col; ctx.fillText(txt, x, yy);
+  });
+}
+function drawCaption(t) {
+  for (const c of CAPTIONS) {
+    const [t0, t1, words, pos] = c; if (t < t0 || t >= t1) continue;
+    const k = backOut(clamp((t - t0) / 0.12));
+    const shot = shotOf(t); const TOP = ['city', 'coup', 'halt', 'obey', 'train', 'rathaus', 'mayor', 'troedel', 'nomoney'];
+    const y = (pos === 'top' || TOP.includes(shot)) ? 470 : 1420, size = 108;
+    ctx.save(); ctx.translate(540, y); ctx.scale(0.8 + 0.2 * k, 0.8 + 0.2 * k);
+    ctx.font = `${size}px ${CAP}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const parts = words.map(w => ({ txt: w.replace(/\*/g, ''), hi: w.includes('*') }));
+    const sp = ctx.measureText(' ').width; const widths = parts.map(p => ctx.measureText(p.txt).width);
+    let total = widths.reduce((a, b) => a + b, 0) + sp * (parts.length - 1); const sc = Math.min(1, 980 / total);
+    ctx.scale(sc, sc); let x = -total / 2;
+    parts.forEach((p, i) => {
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 6; ctx.lineJoin = 'round'; ctx.lineWidth = 13; ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.strokeText(p.txt, x, 0); ctx.restore();
+      ctx.fillStyle = p.hi ? '#ff3b30' : '#ffffff'; ctx.fillText(p.txt, x, 0); x += widths[i] + sp;
+    });
+    ctx.restore();
+  }
+}
+function drawReal(t) {
+  for (const [a, b, txt] of REAL) {
+    if (t < a || t > b) continue;
+    const k = easeOut(clamp((t - a) / 0.3)) * (1 - clamp((t - (b - 0.2)) / 0.2));
+    ctx.save(); ctx.globalAlpha = k; ctx.translate(-30 * (1 - k), 0);
+    ctx.font = `800 34px ${UI}`; const tw = ctx.measureText(txt).width;
+    const w = tw + 150, x = 40, y = 190;
+    rrect(x, y, w, 64, 32, 'rgba(250,248,240,0.95)'); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, y, w, 64, 32); ctx.stroke();
+    rrect(x + 10, y + 10, 96, 44, 22, '#1f8f4e'); ctx.fillStyle = '#fff'; ctx.font = `900 26px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('REAL', x + 58, y + 33);
+    ctx.fillStyle = '#1a1a1a'; ctx.font = `800 34px ${UI}`; ctx.textAlign = 'left'; ctx.fillText(txt, x + 124, y + 34);
+    ctx.restore();
+  }
+}
+
+// ---------- main ----------
+function renderFrame(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.filter = 'none'; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const s = shotOf(t), lt = t - T[s], len = nextT(s) - T[s];
+  SH[s](t, lt, len);
+  // weicher Schnitt: kurzes Abdunkeln am Shot-Anfang
+  if (lt < 0.12 && s !== 'dawn' && s !== 'bang') { ctx.fillStyle = `rgba(0,0,0,${0.6 * (1 - lt / 0.12)})`; ctx.fillRect(0, 0, W, H); }
+  if (t < 0.35) { ctx.fillStyle = `rgba(0,0,0,${1 - t / 0.35})`; ctx.fillRect(0, 0, W, H); }
+  // Vignette + feines Korn
+  const vg = ctx.createRadialGradient(W / 2, H / 2, 520, W / 2, H / 2, 1250); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  drawReal(t);
+  if (s !== 'end') drawCaption(t);
+}
+window.renderFrame = renderFrame;
+window.setCaptions = c => { CAPTIONS = c; };
+if (!location.hash.includes('render')) { const st = performance.now(); (function loop() { renderFrame(((performance.now() - st) / 1000) % window.DURATION); requestAnimationFrame(loop); })(); }
+Promise.all([document.fonts.load(`100px Anton`), document.fonts.load(`900 100px Inter`)]).then(() => { window.READY = true; });
+</script>
+<script src="captions.js"></script>
+</body>
+</html>

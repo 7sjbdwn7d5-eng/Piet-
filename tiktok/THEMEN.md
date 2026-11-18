@@ -12,7 +12,8 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Gleichnis: Der Elefant und das dünne Seil → `elefant/`
 - [x] Gleichnis: Der Elefant – Teil 2: Ein kleiner Ruck → `elefant2/`
 - [x] Gleichnis/Experiment: Der Zuschauer-Effekt (Latané & Darley 1968, Raum voller Rauch) → zuschauer/
-- [ ] Story: Der Hauptmann von Köpenick (1906)
+- [x] Story: Der Hauptmann von Köpenick (1906) → `koepenick/`
+- [ ] Story: Der Hauptmann von Köpenick – Teil 2: Was er wirklich wollte (Pass, Verhaftung, Begnadigung)
 - [ ] Story: Mars Climate Orbiter – Zoll statt Meter (1999)
 - [ ] Story: Der Mann, der zwei Atombomben überlebte (Tsutomu Yamaguchi)
 - [ ] Story: Die Mikrowelle – erfunden durch einen geschmolzenen Schokoriegel
