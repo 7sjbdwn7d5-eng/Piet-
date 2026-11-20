@@ -14,7 +14,7 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Gleichnis/Experiment: Der Zuschauer-Effekt (Latané & Darley 1968, Raum voller Rauch) → zuschauer/
 - [x] Story: Der Hauptmann von Köpenick (1906) → `koepenick/`
 - [x] Story: Der Hauptmann von Köpenick – Teil 2: Was er wirklich wollte (Pass, Verhaftung, Begnadigung) → `koepenick2/`
-- [ ] Story: Mars Climate Orbiter – Zoll statt Meter (1999)
+- [x] Story: Mars Climate Orbiter – Pfund statt Newton (1999) → `mars-orbiter/`
 - [ ] Story: Der Mann, der zwei Atombomben überlebte (Tsutomu Yamaguchi)
 - [ ] Story: Die Mikrowelle – erfunden durch einen geschmolzenen Schokoriegel
 - [ ] Story: Hachikō – der Hund, der 10 Jahre wartete
