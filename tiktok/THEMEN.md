@@ -16,7 +16,7 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Story: Der Hauptmann von Köpenick – Teil 2: Was er wirklich wollte (Pass, Verhaftung, Begnadigung) → `koepenick2/`
 - [x] Story: Mars Climate Orbiter – Pfund statt Newton (1999) → `mars-orbiter/`
 - [x] Story: Der Mann, der zwei Atombomben überlebte (Tsutomu Yamaguchi) → `yamaguchi/`
-- [ ] Story: Die Mikrowelle – erfunden durch einen geschmolzenen Schokoriegel
+- [x] Story: Die Mikrowelle – erfunden durch einen geschmolzenen Schokoriegel → `mikrowelle/`
 - [ ] Story: Hachikō – der Hund, der 10 Jahre wartete
 - [ ] Story: Juliane Koepcke – 3.000 m Sturz, 11 Tage Dschungel
 - [ ] Story: Stanislaw Petrow – der Fehlalarm 1983
