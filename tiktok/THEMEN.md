@@ -17,7 +17,7 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Story: Mars Climate Orbiter – Pfund statt Newton (1999) → `mars-orbiter/`
 - [x] Story: Der Mann, der zwei Atombomben überlebte (Tsutomu Yamaguchi) → `yamaguchi/`
 - [x] Story: Die Mikrowelle – erfunden durch einen geschmolzenen Schokoriegel → `mikrowelle/`
-- [ ] Story: Hachikō – der Hund, der 10 Jahre wartete
+- [x] Story: Hachikō – der Hund, der 10 Jahre wartete → `hachiko/`
 - [ ] Story: Juliane Koepcke – 3.000 m Sturz, 11 Tage Dschungel
 - [ ] Story: Stanislaw Petrow – der Fehlalarm 1983
 - [ ] Story: Pompeji Teil 2 – Schaffen es Marcus und Felix?
