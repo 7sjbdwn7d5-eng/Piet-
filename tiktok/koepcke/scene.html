@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Juliane Koepcke</title>
+<style>
+  @font-face { font-family: 'Anton'; src: url('../fonts/anton-latin-400-normal.woff2') format('woff2'); }
+  html,body{margin:0;background:#000} canvas{display:block}
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// ============================================================
+//  Story-Format: "Juliane Koepcke – 3.000 m Sturz, 11 Tage Dschungel"
+//  Flache Vektor-Illustration, Figuren mit Mimik, Kamera-Moves,
+//  unscharfe Hintergründe, 2–3-Wort-Untertitel, REAL-Fakten-Schild.
+// ============================================================
+const W = 1080, H = 1920;
+let ctx = document.getElementById('c').getContext('2d');
+const MAIN = ctx;
+const OFF = {};
+const CAP = '"Anton", "Inter", sans-serif', UI = '"Inter", sans-serif';
+
+// ---- Zeitplan (Video-Sekunden) – auf den Sprecher gelegt ----
+const T = {
+  jungle: 0, juliane: 2.35, plane: 4.5, storm: 6.87, bolt: 8.05, breakup: 9.85, fall: 11.91, canopy: 14.6,
+  wake: 16.65, injuries: 17.95, alone: 20.75, father: 22.84, water: 25.35, wade: 27.11, hungry: 28.75, hut: 30.25, end: 32.9, out: 39.8,
+};
+window.DURATION = T.out;
+const SHOTS = Object.keys(T).filter(k => k !== 'out');
+const REAL = [
+  [0.4, T.juliane + 1.6, '24.12.1971 – LANSA-Flug 508, Peru'],
+  [T.juliane + 1.7, T.storm, 'Juliane Koepcke, 17, mit ihrer Mutter'],
+  [T.bolt + 0.2, T.fall, 'Blitzschlag – das Flugzeug zerbricht in der Luft'],
+  [T.fall + 0.2, T.wake, 'Sturz aus ca. 3.000 m, im Sitz angeschnallt'],
+  [T.injuries + 0.1, T.father, 'Schlüsselbein gebrochen, Gehirnerschütterung'],
+  [T.water + 0.1, T.hungry, 'Sie folgte Bächen flussabwärts'],
+  [T.hut + 0.1, T.end, 'Waldarbeiter fanden sie nach 11 Tagen'],
+  [T.end + 1.6, T.out, 'Heute ist sie Biologin in Peru und Deutschland'],
+];
+// Untertitel: wird von captions.json ersetzt, falls vorhanden (window.CAPTIONS)
+let CAPTIONS = window.CAPTIONS || [];
+
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const inv = (a, b, x) => clamp((x - a) / (b - a));
+const ease = k => k * k * (3 - 2 * k);
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+const backOut = k => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+function hex(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function mixc(a, b, k) { const A = hex(a), B2 = hex(b); return `rgb(${lerp(A[0], B2[0], k) | 0},${lerp(A[1], B2[1], k) | 0},${lerp(A[2], B2[2], k) | 0})`; }
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const R = rng(1979); const rr = (a, b) => lerp(a, b, R());
+function shotOf(t) { let s = SHOTS[0]; for (const k of SHOTS) if (t >= T[k]) s = k; return s; }
+function nextT(k) { const i = SHOTS.indexOf(k); return i < SHOTS.length - 1 ? T[SHOTS[i + 1]] : T.out; }
+// Schnelle Unschärfe: Ebene in kleiner Auflösung zeichnen und hochskaliert einblenden (statt teurem ctx.filter)
+function layer(factor, fn, filter = 'none') {
+  const key = factor; if (!OFF[key]) { const c = document.createElement('canvas'); c.width = Math.ceil(W / factor); c.height = Math.ceil(H / factor); OFF[key] = c; }
+  const oc = OFF[key], o = oc.getContext('2d'), main = ctx, m = main.getTransform();
+  o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, oc.width, oc.height);
+  o.setTransform(m.a / factor, m.b / factor, m.c / factor, m.d / factor, m.e / factor, m.f / factor);
+  ctx = o; try { fn(); } finally { ctx = main; }
+  main.save(); main.setTransform(1, 0, 0, 1, 0, 0); main.imageSmoothingEnabled = true; main.imageSmoothingQuality = 'high'; main.filter = filter; main.drawImage(oc, 0, 0, W, H); main.restore();
+}
+function blurred(px, fn) { layer(px >= 10 ? 7 : 5, fn); }
+function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
+function rrect(x, y, w, h, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); }
+function circ(x, y, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+function ell(x, y, rx, ry, c, rot = 0) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, 7); ctx.fill(); }
+function poly(pts, c) { ctx.fillStyle = c; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fill(); }
+
+// ============================================================
+//  FIGUREN (flacher Stil, große Augen, Mimik)
+// ============================================================
+// mood: 'calm' | 'happy' | 'worried' | 'shock' | 'sad'
+function face(x, y, r, mood, look = [0, 0], o = {}) {
+  const eyeR = r * 0.2, ex = r * 0.36, ey = -r * 0.05;
+  for (const s of [-1, 1]) {
+    const open = mood === 'shock' ? 1.25 : 1;
+    ell(x + s * ex, y + ey, eyeR * open, eyeR * 1.15 * open, '#ffffff');
+    circ(x + s * ex + look[0] * eyeR * 0.45, y + ey + look[1] * eyeR * 0.45, eyeR * (mood === 'shock' ? 0.45 : 0.6), '#231a17');
+    circ(x + s * ex + look[0] * eyeR * 0.45 - eyeR * 0.18, y + ey + look[1] * eyeR * 0.45 - eyeR * 0.2, eyeR * 0.16, '#fff');
+    // Augenbrauen: innen höher = besorgt/traurig, innen tiefer = wütend
+    ctx.strokeStyle = o.brow || '#3a2418'; ctx.lineWidth = r * 0.07; ctx.lineCap = 'round'; ctx.beginPath();
+    const by = y + ey - eyeR * 1.55 - (mood === 'shock' ? eyeR * 0.5 : 0) - (mood === 'happy' ? eyeR * 0.15 : 0);
+    const innerUp = mood === 'worried' || mood === 'sad' ? eyeR * 0.55 : mood === 'angry' ? -eyeR * 0.5 : 0;
+    ctx.moveTo(x + s * (ex - eyeR * 0.9), by - innerUp); ctx.lineTo(x + s * (ex + eyeR), by + innerUp * 0.3);
+    ctx.stroke();
+  }
+  // Mund
+  ctx.strokeStyle = '#3a1f17'; ctx.lineWidth = r * 0.07; ctx.beginPath();
+  const my = y + r * 0.45;
+  if (mood === 'happy') ctx.arc(x, my - r * 0.12, r * 0.22, 0.2, Math.PI - 0.2);
+  else if (mood === 'shock') { ctx.stroke(); ell(x, my, r * 0.12, r * 0.16, '#3a1f17'); return; }
+  else if (mood === 'worried' || mood === 'sad') ctx.arc(x, my + r * 0.14, r * 0.18, Math.PI + 0.4, -0.4);
+  else { ctx.moveTo(x - r * 0.14, my); ctx.lineTo(x + r * 0.14, my); }
+  ctx.stroke();
+}
+function sweat(x, y, s, t) { const k = (t * 1.2) % 1; ctx.save(); ctx.globalAlpha = 1 - k * 0.6; ctx.fillStyle = '#9fd8ff'; ctx.beginPath(); ctx.moveTo(x, y + k * 20 * s - 18 * s); ctx.quadraticCurveTo(x + 12 * s, y + k * 20 * s + 6 * s, x, y + k * 20 * s + 10 * s); ctx.quadraticCurveTo(x - 12 * s, y + k * 20 * s + 6 * s, x, y + k * 20 * s - 18 * s); ctx.fill(); ctx.restore(); }
+// Person (Ganzkörper). opts: skin, tunic, hair, mood, look, arms:[l,r] Winkel, walk, carry
+function person(x, y, s, o = {}) {
+  const skin = o.skin || '#e0a57a', tunic = o.tunic || '#c9583a', hair = o.hair || '#3a2418';
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  const w = o.walk || 0, lg = Math.sin(w) * 18;
+  // Beine
+  ctx.strokeStyle = skin; ctx.lineWidth = 22; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-16, -110); ctx.lineTo(-20 - lg, -8); ctx.moveTo(16, -110); ctx.lineTo(20 + lg, -8); ctx.stroke();
+  ell(-22 - lg, -4, 24, 11, o.modern || o.coat ? '#2a2420' : '#6a4126'); ell(22 + lg, -4, 24, 11, o.modern || o.coat ? '#2a2420' : '#6a4126');
+  if (o.coat) { poly([[-50, -275], [50, -275], [70, -60], [-70, -60]], o.coat); rect(-4, -270, 8, 200, 'rgba(0,0,0,0.25)'); }
+  else if (o.modern) { ctx.strokeStyle = o.pants || '#3a4a6a'; ctx.lineWidth = 26; ctx.beginPath(); ctx.moveTo(-16, -150); ctx.lineTo(-20 - lg, -12); ctx.moveTo(16, -150); ctx.lineTo(20 + lg, -12); ctx.stroke(); rrect(-48, -275, 96, 140, 22, tunic); poly([[-18, -275], [0, -250], [18, -275]], 'rgba(255,255,255,0.7)'); }
+  else { poly([[-46, -270], [46, -270], [62, -105], [-62, -105]], tunic); rect(-50, -200, 100, 12, 'rgba(0,0,0,0.15)'); }
+  // Arme
+  const [al, ar] = o.arms || [0.15, -0.15];
+  ctx.strokeStyle = skin; ctx.lineWidth = 20;
+  for (const [sx, v] of [[-1, al], [1, ar]]) { const a = Math.abs(v); ctx.beginPath(); ctx.moveTo(sx * 40, -255); ctx.lineTo(sx * 40 + sx * Math.sin(a) * 105, -255 + Math.cos(a) * 105); ctx.stroke(); }
+  // Kopf
+  circ(0, -330, 62, skin);
+  ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0, -342, 64, Math.PI * 1.02, Math.PI * 1.98); ctx.quadraticCurveTo(40, -360, 0, -362); ctx.fill();
+  if (o.beard) { ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0, -318, 58, 0.15, Math.PI - 0.15); ctx.fill(); circ(0, -318, 40, skin); }
+  face(0, -326, 62, o.mood || 'calm', o.look || [0, 0], { brow: hair });
+  if (o.sweat) sweat(56, -380, 1.2, o.t || 0);
+  if (o.hat) { rrect(-70, -392, 140, 22, 10, o.hat); rrect(-48, -440, 96, 56, 14, o.hat); }
+  if (o.pillow) { rrect(-80, -440, 160, 56, 26, '#e9d8b8'); rect(-80, -414, 160, 6, '#c9b590'); }
+  ctx.restore();
+}
+function sky(top, bot, y1 = 1300) { const g = ctx.createLinearGradient(0, 0, 0, y1); g.addColorStop(0, top); g.addColorStop(1, bot); ctx.fillStyle = g; ctx.fillRect(-400, -400, W + 800, y1 + 400); }
+const stars = Array.from({ length: 200 }, () => ({ x: rr(-100, W + 100), y: rr(-200, 1200), r: rr(0.8, 2.6), b: rr(0.3, 1) }));
+function starfield(t, a = 1) { for (const s of stars) { ctx.fillStyle = `rgba(255,255,255,${a * s.b * (0.7 + 0.3 * Math.sin(t * 2 + s.x))})`; ctx.fillRect(s.x, s.y, s.r, s.r); } }
+function pine(x, y, s, c = '#1a2a24') { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); rect(-8, -40, 16, 40, '#2a1e16'); for (let i = 0; i < 4; i++) poly([[-90 + i * 15, -40 - i * 70], [0, -160 - i * 70], [90 - i * 15, -40 - i * 70]], c); ctx.restore(); }
+function forestRow(base, n, s, c, seed = 1) { const r2 = rng(seed); for (let i = 0; i < n; i++) pine(-60 + i * (1200 / n) + r2() * 40, base + r2() * 30, s * (0.8 + r2() * 0.4), c); }
+const SH = {};
+function camera(scale, x = 0, y = 0) { ctx.translate(W / 2 + x, H / 2 + y); ctx.scale(scale, scale); ctx.translate(-W / 2, -H / 2); }
+
+
+
+
+
+
+// ============================================================
+//  JULIANE KOEPCKE – Kulissen & Figuren (Peru 1971)
+// ============================================================
+const JUL = { skin: '#f2cca8', hair: '#c89a5a', dress: '#4aa0c8' };
+function bustJ(x, y, r, o = {}) {
+  const skin = o.skin || JUL.skin, hair = o.hair || JUL.hair;
+  if (!o.short) { ctx.fillStyle = hair; ctx.beginPath(); ctx.roundRect(x - r * 1.15, y - r * 0.9, r * 2.3, r * 2.5, r * 0.9); ctx.fill(); }
+  rrect(x - r * 1.1, y + r * 0.85, r * 2.2, r * 3.4, r * 0.5, o.dress || JUL.dress);
+  if (o.dirty) { ctx.save(); ctx.globalAlpha = 0.35; for (let i = 0; i < 8; i++) ell(x - r * 0.8 + (i * 37 % 160) * r / 100, y + r * (1.2 + (i % 4) * 0.5), r * 0.2, r * 0.12, '#5a3a1a'); ctx.restore(); }
+  circ(x, y, r, skin); circ(x - r, y + r * 0.05, r * 0.2, skin); circ(x + r, y + r * 0.05, r * 0.2, skin);
+  ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(x, y - r * 0.14, r * 1.04, Math.PI * 1.0, Math.PI * 2.0); ctx.quadraticCurveTo(x + r * 0.5, y - r * 0.5, x - r * 0.1, y - r * 0.72); ctx.quadraticCurveTo(x - r * 0.7, y - r * 0.5, x - r * 1.04, y - r * 0.1); ctx.fill();
+  face(x, y + r * 0.05, r, o.mood || 'calm', o.look || [0, 0], { brow: '#8a6a3a' });
+  if (o.glasses) { ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = r * 0.05; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * r * 0.36, y, r * 0.27, 0, 7); ctx.stroke(); } }
+  if (o.swollen) ell(x + r * 0.36, y + r * 0.02, r * 0.3, r * 0.24, 'rgba(190,90,110,0.55)');
+  if (o.scratch) { ctx.strokeStyle = 'rgba(180,60,60,0.7)'; ctx.lineWidth = r * 0.03; ctx.beginPath(); ctx.moveTo(x - r * 0.7, y + r * 0.4); ctx.lineTo(x - r * 0.4, y + r * 0.55); ctx.stroke(); }
+  if (o.sweat) sweat(x + r * 0.95, y - r * 0.6, r / 40, o.t || 0);
+  if (o.eyesClosed) { ctx.fillStyle = skin; for (const s of [-1, 1]) ell(x + s * r * 0.36, y, r * 0.24, r * 0.26 * o.eyesClosed, skin); }
+}
+function girl(x, y, s, o = {}) { person(x, y, s, { coat: o.dress || JUL.dress, skin: JUL.skin, hair: JUL.hair, mood: o.mood || 'calm', look: o.look || [0, 0], arms: o.arms, walk: o.walk, t: o.t, sweat: o.sweat });
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = JUL.hair; ctx.beginPath(); ctx.roundRect(-66, -360, 132, 120, 40); ctx.globalCompositeOperation = 'destination-over'; ctx.fill(); ctx.restore(); }
+function treeBlob(x, y, r, c) { circ(x, y, r, c); circ(x - r * 0.6, y + r * 0.3, r * 0.7, c); circ(x + r * 0.6, y + r * 0.25, r * 0.75, c); }
+const canopy = Array.from({ length: 60 }, () => ({ x: rr(-200, W + 200), y: rr(0, 1), r: rr(60, 140), c: Math.floor(rr(0, 4)) }));
+function rainforestTop(t, horizon = 1100, o = {}) {   // Luftbild
+  sky(o.dark ? '#1a2030' : '#6aa8d8', o.dark ? '#3a4050' : '#d8ecf0', horizon); const cols = o.dark ? ['#0e2a18', '#123420', '#163a24', '#0a2214'] : ['#1f6a34', '#2a7a3a', '#358a44', '#1a5a2c'];
+  rect(-300, horizon, W + 600, H, cols[3]); for (const c of canopy) treeBlob(c.x, horizon + c.y * (H - horizon + 200), c.r * (0.5 + c.y), cols[c.c]);
+  if (o.river) { ctx.strokeStyle = o.dark ? '#3a5a6a' : '#7ab0c8'; ctx.lineWidth = 40; ctx.beginPath(); ctx.moveTo(-100, horizon + 200); ctx.bezierCurveTo(300, horizon + 300, 600, horizon + 150, 1200, horizon + 420); ctx.stroke(); }
+}
+function jungleFloor(t, o = {}) {
+  rect(-300, -300, W + 600, H + 600, '#1a3a1e'); const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(120,200,120,0.25)'); g.addColorStop(1, 'rgba(0,0,0,0.3)'); ctx.fillStyle = g; ctx.fillRect(-300, -300, W + 600, H + 600);
+  for (let i = 0; i < 7; i++) { const x = -60 + i * 190; rect(x, -100, 46 + (i % 3) * 20, 1700, ['#3a2a1a', '#4a3420', '#2e2214'][i % 3]); }
+  for (let i = 0; i < 26; i++) treeBlob((i * 97) % 1200 - 60, 120 + (i % 5) * 70, 110, ['#1f5a2a', '#2a6a32', '#174a22'][i % 3]);
+  for (let i = 0; i < 14; i++) { ctx.save(); ctx.translate((i * 151) % 1100, 1500 + (i % 3) * 80); ctx.rotate(-0.6 + (i % 5) * 0.3); ell(0, -80, 40, 120, ['#2e7a3a', '#3a8a44'][i % 2]); ctx.restore(); }
+  if (o.stream) { ctx.fillStyle = '#4a7a8a'; ctx.beginPath(); ctx.moveTo(-200, 1450); ctx.bezierCurveTo(300, 1380, 700, 1560, 1300, 1480); ctx.lineTo(1300, 2200); ctx.lineTo(-200, 2200); ctx.fill();
+    for (let i = 0; i < 12; i++) { const k = (t * 0.3 + i / 12) % 1; rect(-200 + k * 1500, 1560 + (i % 4) * 70, 90, 6, 'rgba(255,255,255,0.35)'); } }
+  rect(-300, 1650, W + 600, 600, o.stream ? 'rgba(0,0,0,0)' : '#2a2416');
+}
+function plane(x, y, s, t, o = {}) { ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0); ctx.scale(s, s);
+  const split = o.split || 0;
+  ctx.save(); ctx.translate(-split * 120, split * 60); ctx.rotate(-split * 0.4);
+  rrect(-420, -50, 420, 100, [50, 0, 0, 50], '#f2f2ee'); rect(-420, -6, 420, 16, '#1a5aa8'); for (let i = 0; i < 6; i++) circ(-360 + i * 60, -18, 12, '#4a6a8a');
+  poly([[-400, -40], [-470, -150], [-420, -150], [-340, -40]], '#e8e8e2'); ctx.restore();
+  ctx.save(); ctx.translate(split * 120, split * 90); ctx.rotate(split * 0.5);
+  rrect(0, -50, 420, 100, [0, 60, 60, 0], '#f2f2ee'); rect(0, -6, 380, 16, '#1a5aa8'); for (let i = 0; i < 5; i++) circ(40 + i * 60, -18, 12, '#4a6a8a'); rrect(330, -40, 70, 34, 10, '#3a5a7a');
+  poly([[-60, 10], [140, 10], [60, 160], [-40, 160]], '#d8d8d2');
+  for (const px of [-20, 80]) { rect(px, 0, 50, 24, '#9a9a96'); ctx.save(); ctx.translate(px + 55, 12); ctx.rotate(t * 40); rect(-4, -40, 8, 80, '#444'); ctx.restore(); }
+  ctx.restore(); ctx.restore(); }
+function seatRow(x, y, s, rot, withGirl = true, t = 0) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+  for (let i = 0; i < 3; i++) { rrect(-180 + i * 125, -170, 110, 180, 16, '#3a5a8a'); rrect(-180 + i * 125, -10, 110, 50, 10, '#2a4a7a'); }
+  if (withGirl) { circ(-125, -190, 46, JUL.skin); ctx.fillStyle = JUL.hair; ctx.beginPath(); ctx.arc(-125, -200, 50, Math.PI, 0); ctx.fill(); face(-125, -186, 46, 'shock', [0, 0], { brow: '#8a6a3a' }); rrect(-165, -140, 80, 110, 20, JUL.dress); rect(-170, -70, 90, 10, '#c8c8c8'); }
+  ctx.restore(); }
+function hut(x, y, s) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); rect(-200, -220, 400, 220, '#8a6a3a'); for (let i = 0; i < 6; i++) rect(-200 + i * 70, -220, 6, 220, 'rgba(0,0,0,0.2)'); poly([[-260, -210], [0, -380], [260, -210]], '#c8a050'); rect(-50, -140, 100, 140, '#3a2a1a'); for (const lx of [-180, 160]) rect(lx, 0, 20, 80, '#5a3a1a'); ctx.restore(); }
+
+// ---------- Einstellungen ----------
+SH.jungle = (t, lt, len) => { ctx.save(); camera(1.08 - 0.06 * ease(lt / len)); rainforestTop(t, 900, { river: true }); plane(lerp(200, 700, lt / len), 520, 0.6, t); ctx.restore();
+  const k = backOut(clamp(lt / 0.35)) * (1 - clamp((lt - 1.9) / 0.25)); if (k > 0.01) { ctx.save(); ctx.translate(540, 1050); ctx.scale(k, k); capText([['HEILIGABEND', '#fff'], ['1971', '#ffb020']], 0, 0, 150, true); ctx.restore(); } };
+SH.juliane = (t, lt, len) => { ctx.save(); camera(1.08 + 0.05 * ease(lt / len));
+  rect(-200, -200, W + 400, H + 400, '#d8d4c8'); rrect(640, 380, 300, 420, 120, '#5a5a5a'); rrect(670, 410, 240, 360, 100, '#8ac8f0'); ctx.save(); ctx.beginPath(); ctx.roundRect(670, 410, 240, 360, 100); ctx.clip(); rect(670, 640, 240, 200, '#2a7a3a'); for (let i = 0; i < 5; i++) circ(690 + i * 50, 650, 40, '#358a44'); ctx.restore();
+  blurred(6, () => bustJ(820, 1050, 170, { hair: '#7a5a3a', dress: '#8a5a7a', skin: '#ecc4a0', mood: 'happy', look: [-1, 0] }));
+  bustJ(400, 950, 220, { mood: 'happy', look: [0.6, -0.2], glasses: true });
+  ctx.restore();
+  const k = backOut(clamp((lt - 0.3) / 0.3)); if (k > 0) { ctx.save(); ctx.translate(400, 520); ctx.scale(k, k); rrect(-170, -50, 340, 100, 50, '#ffb020'); ctx.fillStyle = '#111'; ctx.font = `64px ${CAP}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('JULIANE, 17', 0, 4); ctx.restore(); } };
+SH.plane = (t, lt, len) => { ctx.save(); camera(1.0); sky('#6aa8d8', '#e8f0f0', 1900); for (let i = 0; i < 8; i++) ell(((i * 260 - lt * 300) % 1600 + 1600) % 1600 - 250, 1300 + (i % 3) * 140, 260, 70, 'rgba(255,255,255,0.85)');
+  plane(540, 850, 1.1, t, { rot: Math.sin(t) * 0.02 }); ctx.restore(); };
+SH.storm = (t, lt, len) => { const sh = Math.sin(t * 30) * 8; ctx.save(); camera(1.1, sh, 0);
+  rect(-200, -200, W + 400, H + 400, '#3a3e48'); rrect(640, 380, 300, 420, 120, '#4a4a4a'); rrect(670, 410, 240, 360, 100, '#1a1e28'); if (Math.sin(t * 9) > 0.92) rect(670, 410, 240, 360, '#e8f0ff');
+  bustJ(420, 950, 230, { mood: 'worried', look: [0.8, -0.2], glasses: true, sweat: true, t });
+  ctx.restore(); };
+SH.bolt = (t, lt, len) => { ctx.save(); camera(1.0, Math.sin(t * 50) * 10 * clamp(1 - lt), 0);
+  sky('#14161e', '#2a2e3a', 1900); for (let i = 0; i < 10; i++) ell(((i * 230) % 1300) - 100, 200 + (i % 4) * 300, 300, 110, '#2a2e38');
+  plane(540, 1000, 1.0, t, { rot: Math.sin(t * 8) * 0.06 });
+  if (lt > 0.4 && lt < 1.2) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 14; ctx.shadowColor = '#bcd8ff'; ctx.shadowBlur = 40; ctx.beginPath(); ctx.moveTo(760, -50); ctx.lineTo(680, 300); ctx.lineTo(760, 420); ctx.lineTo(640, 700); ctx.lineTo(700, 780); ctx.lineTo(600, 1000); ctx.stroke(); ctx.shadowBlur = 0; }
+  if (lt > 0.4 && lt < 0.6) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-200, -200, W + 400, H + 400); }
+  ctx.restore(); };
+SH.breakup = (t, lt, len) => { ctx.save(); camera(1.0, Math.sin(t * 40) * 8, 0);
+  sky('#14161e', '#2a2e3a', 1900); for (let i = 0; i < 10; i++) ell(((i * 230) % 1300) - 100, 200 + (i % 4) * 300, 300, 110, '#2a2e38');
+  const k = ease(clamp(lt / 1.6)); plane(540, 1000 + k * 200, 1.0, t, { split: k * 2.5, rot: k * 0.3 });
+  for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; rect(540 + Math.cos(a) * 400 * k, 1000 + Math.sin(a) * 300 * k + k * 300, 30, 20, '#c8c8c4'); }
+  ctx.restore(); };
+SH.fall = (t, lt, len) => { ctx.save(); camera(1.0);
+  sky('#2a3040', '#8aa0b0', 1900); for (let i = 0; i < 9; i++) { const y = ((i * 260 - lt * 1400) % 2200 + 2200) % 2200 - 200; ell((i * 173) % 1100, y, 220, 60, 'rgba(220,225,235,0.7)'); }
+  seatRow(540, 950, 1.4, Math.sin(t * 2.5) * 0.6, true, t);
+  ctx.restore();
+  const alt = Math.round(lerp(3000, 400, ease(clamp(lt / (len - 0.2)))) / 50) * 50; ctx.save(); rrect(640, 330, 380, 110, 26, 'rgba(0,0,0,0.6)'); ctx.font = `80px ${CAP}`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(alt.toLocaleString('de-DE') + ' m ↓', 830, 388); ctx.restore(); };
+SH.canopy = (t, lt, len) => { ctx.save(); const k = ease(clamp(lt / 1.4)); camera(1.0 + k * 0.4, 0, -k * 200);
+  rainforestTop(t, 600, {}); seatRow(540, lerp(300, 1100, k), lerp(0.6, 1.0, k), Math.sin(t * 3) * 0.5, true, t);
+  if (lt > 1.4) { ctx.fillStyle = `rgba(0,0,0,${clamp((lt - 1.4) / 0.6)})`; ctx.fillRect(-300, -300, W + 600, H + 600); }
+  ctx.restore(); };
+SH.wake = (t, lt, len) => { ctx.save(); camera(1.15); blurred(10, () => jungleFloor(t)); bustJ(540, 950, 240, { mood: 'worried', look: [0, -0.2], swollen: true, scratch: true, dirty: true, eyesClosed: 1 - clamp(lt / 0.8) });
+  ctx.restore(); if (lt < 0.5) { ctx.fillStyle = `rgba(0,0,0,${1 - lt / 0.5})`; ctx.fillRect(0, 0, W, H); } };
+SH.injuries = (t, lt, len) => { ctx.save(); camera(1.05); jungleFloor(t); girl(540, 1880, 1.4, { mood: 'sad', look: [0, 0.4], arms: [0.3, 0.9] }); ctx.restore();
+  const items = [['SCHLÜSSELBEIN', 0.0], ['BRILLE', 1.3], ['1 SCHUH', 2.1]];
+  items.forEach(([txt, at], i) => { const k = backOut(clamp((lt - at) / 0.3)); if (k <= 0) return; ctx.save(); ctx.translate(540, 650 + i * 150); ctx.scale(k, k); rrect(-260, -55, 520, 110, 55, 'rgba(255,255,255,0.95)'); ctx.fillStyle = '#111'; ctx.font = `60px ${CAP}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, 0, 4); ctx.strokeStyle = '#ff3b30'; ctx.lineWidth = 10; if (i < 2) { ctx.beginPath(); ctx.moveTo(-200, 0); ctx.lineTo(200, 0); ctx.stroke(); } ctx.restore(); }); };
+SH.alone = (t, lt, len) => { ctx.save(); camera(1.0 - 0.06 * ease(lt / len)); jungleFloor(t); girl(540, 1680, 0.7, { mood: 'worried', look: [Math.sin(t * 1.5), -0.3], arms: [0.3, 2.4] }); ctx.restore();
+  for (let i = 0; i < 2; i++) { const k = (lt * 0.8 + i / 2) % 1; ctx.save(); ctx.globalAlpha = 1 - k; capText([['MAMA?', '#fff']], 540 + (i ? 120 : -120), 1150 - k * 200, 70); ctx.restore(); } };
+SH.father = (t, lt, len) => { ctx.save(); camera(1.08); rect(-200, -200, W + 400, H + 400, '#c8a878');
+  bustJ(540, 880, 220, { short: true, glasses: true, hair: '#5a4a3a', dress: '#6a7a5a', skin: '#e8c0a0', mood: 'happy', look: [0.3, 0.2] }); ctx.fillStyle = '#5a4a3a'; ctx.beginPath(); ctx.arc(540, 960, 150, 0.25, Math.PI - 0.25); ctx.fill(); circ(540, 950, 110, '#e8c0a0'); face(540, 928, 220, 'happy', [0.3, 0.2], { brow: '#5a4a3a' }); rect(410, 840, 260, 20, 'rgba(0,0,0,0)');
+  ctx.fillStyle = 'rgba(120,80,40,0.25)'; ctx.fillRect(-200, -200, W + 400, H + 400);
+  ctx.restore(); label2('VATER', 540, 520, backOut(clamp((lt - 0.2) / 0.3)));
+  const k = backOut(clamp((lt - 1.5) / 0.3)); if (k > 0) { ctx.save(); ctx.translate(540, 1300); ctx.scale(k, k); rrect(-380, -70, 760, 140, 70, '#fff'); ctx.fillStyle = '#1a5aa8'; ctx.font = `70px ${CAP}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('„FOLGE DEM WASSER!“', 0, 6); ctx.restore(); } };
+function label2(txt, x, y, k) { if (k <= 0) return; ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.font = `64px ${CAP}`; const w = ctx.measureText(txt).width + 60; rrect(-w / 2, -50, w, 100, 50, '#ffb020'); ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, 0, 4); ctx.restore(); }
+SH.water = (t, lt, len) => { ctx.save(); camera(1.05, -lt * 30, 0); jungleFloor(t, { stream: true });
+  const k = ease(clamp(lt / 1.5)); ctx.strokeStyle = '#ffb020'; ctx.lineWidth = 16; ctx.setLineDash([30, 20]); ctx.beginPath(); ctx.moveTo(100, 1620); ctx.lineTo(lerp(100, 900, k), lerp(1620, 1600, k)); ctx.stroke(); ctx.setLineDash([]); if (k > 0.95) poly([[900, 1570], [960, 1600], [900, 1630]], '#ffb020');
+  ctx.restore(); };
+SH.wade = (t, lt, len) => { ctx.save(); camera(1.05, -lt * 40, 0); jungleFloor(t, { stream: true });
+  ctx.save(); ctx.beginPath(); ctx.rect(-300, -300, W + 600, 1850); ctx.clip(); girl(500 + lt * 60, 1760, 1.15, { walk: t * 3, mood: 'worried', look: [1, 0.3] }); ctx.restore();
+  ctx.fillStyle = 'rgba(74,122,138,0.75)'; ctx.fillRect(-300, 1640, W + 600, 600);
+  ctx.restore();
+  const d = Math.min(11, 1 + Math.floor(lt / (len - 0.1) * 10)); ctx.save(); ctx.translate(540, 800); capText([['TAG ' + d, d >= 10 ? '#ffb020' : '#fff']], 0, 0, 120); ctx.restore(); };
+SH.hungry = (t, lt, len) => { ctx.save(); camera(1.12 + 0.05 * ease(lt / len)); blurred(10, () => jungleFloor(t, { stream: true })); bustJ(540, 950, 240, { mood: 'sad', look: [0, 0.4], swollen: true, scratch: true, dirty: true, sweat: true, t }); ctx.restore(); };
+SH.hut = (t, lt, len) => { ctx.save(); camera(1.0 + 0.1 * ease(lt / len)); jungleFloor(t, { stream: true });
+  const g = ctx.createRadialGradient(700, 1300, 30, 700, 1300, 600); g.addColorStop(0, 'rgba(255,230,150,0.45)'); g.addColorStop(1, 'rgba(255,230,150,0)'); ctx.fillStyle = g; ctx.fillRect(-200, 600, W + 400, 1400);
+  hut(720, 1500, 1.0); ell(400, 1600, 180, 30, '#6a4a2a'); girl(260, 1820, 0.85, { mood: 'happy', look: [1, -0.2] }); ctx.restore();
+  const k = backOut(clamp((lt - 0.8) / 0.3)); if (k > 0) { ctx.save(); ctx.translate(540, 900); ctx.scale(k, k); capText([['TAG 11', '#3ddc84']], 0, 0, 130); ctx.restore(); } };
+SH.end = (t, lt, len) => {
+  ctx.save(); camera(1.05 + 0.04 * ease(lt / len)); blurred(8, () => rainforestTop(t, 900, { river: true, dark: true })); ctx.restore();
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, W, H);
+  const k1 = backOut(clamp((lt - 0.1) / 0.4));
+  if (k1 > 0) { ctx.save(); ctx.translate(540, 720); ctx.scale(k1, k1); capText([['WIE VIELE HABEN', '#fff'], ['ÜBERLEBT?', '#ff3b30']], 0, 0, 130, true); ctx.restore(); }
+  const k3 = backOut(clamp((lt - 0.6) / 0.4)); if (k3 > 0) { ctx.save(); ctx.translate(540, 950); ctx.scale(k3, k3); capText([['92 AN BORD', '#ffb020']], 0, 0, 90); ctx.restore(); }
+  const k2 = clamp((lt - 1.4) / 0.4);
+  if (k2 > 0) { ctx.save(); ctx.globalAlpha = k2; rrect(130, 1090, 820, 110, 55, '#fff'); ctx.fillStyle = '#111'; ctx.font = `900 50px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('Schreibt es in die Kommentare', 540, 1146); ctx.restore(); }
+};
+
+// ============================================================
+//  TEXT: Untertitel (2–3 Wörter) + REAL-Schild
+// ============================================================
+function capText(lines, x, y, size, stacked = false) {
+  ctx.font = `${size}px ${CAP}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  lines.forEach(([txt, col], i) => {
+    const yy = y + (stacked ? (i - (lines.length - 1) / 2) * size * 1.1 : 0);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6; ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.12; ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.strokeText(txt, x, yy); ctx.restore();
+    ctx.fillStyle = col; ctx.fillText(txt, x, yy);
+  });
+}
+function drawCaption(t) {
+  for (const c of CAPTIONS) {
+    const [t0, t1, words, pos] = c; if (t < t0 || t >= t1) continue;
+    const k = backOut(clamp((t - t0) / 0.12));
+    const shot = shotOf(t); const TOP = ['injuries', 'alone', 'hut', 'wade'];
+    const y = (pos === 'top' || TOP.includes(shot)) ? 470 : 1420, size = 108;
+    ctx.save(); ctx.translate(540, y); ctx.scale(0.8 + 0.2 * k, 0.8 + 0.2 * k);
+    ctx.font = `${size}px ${CAP}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const parts = words.map(w => ({ txt: w.replace(/\*/g, ''), hi: w.includes('*') }));
+    const sp = ctx.measureText(' ').width; const widths = parts.map(p => ctx.measureText(p.txt).width);
+    let total = widths.reduce((a, b) => a + b, 0) + sp * (parts.length - 1); const sc = Math.min(1, 980 / total);
+    ctx.scale(sc, sc); let x = -total / 2;
+    parts.forEach((p, i) => {
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 6; ctx.lineJoin = 'round'; ctx.lineWidth = 13; ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.strokeText(p.txt, x, 0); ctx.restore();
+      ctx.fillStyle = p.hi ? '#ff3b30' : '#ffffff'; ctx.fillText(p.txt, x, 0); x += widths[i] + sp;
+    });
+    ctx.restore();
+  }
+}
+function drawReal(t) {
+  for (const [a, b, txt] of REAL) {
+    if (t < a || t > b) continue;
+    const k = easeOut(clamp((t - a) / 0.3)) * (1 - clamp((t - (b - 0.2)) / 0.2));
+    ctx.save(); ctx.globalAlpha = k; ctx.translate(-30 * (1 - k), 0);
+    ctx.font = `800 34px ${UI}`; const tw = ctx.measureText(txt).width;
+    const w = tw + 150, x = 40, y = 190;
+    rrect(x, y, w, 64, 32, 'rgba(250,248,240,0.95)'); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, y, w, 64, 32); ctx.stroke();
+    rrect(x + 10, y + 10, 96, 44, 22, '#1f8f4e'); ctx.fillStyle = '#fff'; ctx.font = `900 26px ${UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('REAL', x + 58, y + 33);
+    ctx.fillStyle = '#1a1a1a'; ctx.font = `800 34px ${UI}`; ctx.textAlign = 'left'; ctx.fillText(txt, x + 124, y + 34);
+    ctx.restore();
+  }
+}
+
+// ---------- main ----------
+function renderFrame(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.filter = 'none'; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const s = shotOf(t), lt = t - T[s], len = nextT(s) - T[s];
+  SH[s](t, lt, len);
+  // weicher Schnitt: kurzes Abdunkeln am Shot-Anfang
+  if (lt < 0.12 && s !== 'dawn' && s !== 'bang') { ctx.fillStyle = `rgba(0,0,0,${0.6 * (1 - lt / 0.12)})`; ctx.fillRect(0, 0, W, H); }
+  if (t < 0.35) { ctx.fillStyle = `rgba(0,0,0,${1 - t / 0.35})`; ctx.fillRect(0, 0, W, H); }
+  // Vignette + feines Korn
+  const vg = ctx.createRadialGradient(W / 2, H / 2, 520, W / 2, H / 2, 1250); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  drawReal(t);
+  if (s !== 'end') drawCaption(t);
+}
+window.renderFrame = renderFrame;
+window.setCaptions = c => { CAPTIONS = c; };
+if (!location.hash.includes('render')) { const st = performance.now(); (function loop() { renderFrame(((performance.now() - st) / 1000) % window.DURATION); requestAnimationFrame(loop); })(); }
+Promise.all([document.fonts.load(`100px Anton`), document.fonts.load(`900 100px Inter`)]).then(() => { window.READY = true; });
+</script>
+<script src="captions.js"></script>
+</body>
+</html>

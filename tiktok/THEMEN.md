@@ -18,7 +18,7 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Story: Der Mann, der zwei Atombomben überlebte (Tsutomu Yamaguchi) → `yamaguchi/`
 - [x] Story: Die Mikrowelle – erfunden durch einen geschmolzenen Schokoriegel → `mikrowelle/`
 - [x] Story: Hachikō – der Hund, der 10 Jahre wartete → `hachiko/`
-- [ ] Story: Juliane Koepcke – 3.000 m Sturz, 11 Tage Dschungel
+- [x] Story: Juliane Koepcke – 3.000 m Sturz, 11 Tage Dschungel → `koepcke/`
 - [ ] Story: Stanislaw Petrow – der Fehlalarm 1983
 - [ ] Story: Pompeji Teil 2 – Schaffen es Marcus und Felix?
 - [ ] Story: Ein Pirat in der Karibik um 1700 (gewählter Kapitän, Skorbut)
