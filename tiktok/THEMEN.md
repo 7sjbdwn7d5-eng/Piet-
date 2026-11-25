@@ -19,7 +19,7 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Story: Die Mikrowelle – erfunden durch einen geschmolzenen Schokoriegel → `mikrowelle/`
 - [x] Story: Hachikō – der Hund, der 10 Jahre wartete → `hachiko/`
 - [x] Story: Juliane Koepcke – 3.000 m Sturz, 11 Tage Dschungel → `koepcke/`
-- [ ] Story: Stanislaw Petrow – der Fehlalarm 1983
+- [x] Story: Stanislaw Petrow – der Fehlalarm 1983 → `petrow/`
 - [ ] Story: Pompeji Teil 2 – Schaffen es Marcus und Felix?
 - [ ] Story: Ein Pirat in der Karibik um 1700 (gewählter Kapitän, Skorbut)
 - [ ] Ein Tag als Astronaut auf der ISS (16 Sonnenaufgänge, Urin wird Trinkwasser)
