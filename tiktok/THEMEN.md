@@ -21,7 +21,7 @@ Jeden Tag wird das oberste offene Thema produziert und abgehakt. Neue Ideen einf
 - [x] Story: Juliane Koepcke – 3.000 m Sturz, 11 Tage Dschungel → `koepcke/`
 - [x] Story: Stanislaw Petrow – der Fehlalarm 1983 → `petrow/`
 - [x] Story: Pompeji Teil 2 – Schaffen es Marcus und Felix? → `pompeji2/`
-- [ ] Story: Ein Pirat in der Karibik um 1700 (gewählter Kapitän, Skorbut)
+- [x] Story: Ein Pirat in der Karibik um 1700 (gewählter Kapitän, Skorbut) → `pirat/`
 - [ ] Ein Tag als Astronaut auf der ISS (16 Sonnenaufgänge, Urin wird Trinkwasser)
 - [ ] Die letzten Stunden der Titanic (2 Stunden 40 Minuten, Minute für Minute)
 - [ ] Ein Tag als Ritter im Mittelalter (Rüstung 20–25 kg, Knappe)
